@@ -335,7 +335,7 @@ app.patch('/member/repw', (req, res) => {
             console.log(err)
           } else {
             req.session.destroy()
-            res.redirect('/')
+            res.redirect('/dddd')
           }
         })
       }

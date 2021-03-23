@@ -115,20 +115,29 @@ app.post('/member/signup', (req, res) => {
 // 중복이 아닐경우 false 반환
 app.get('/member/check-email', (req, res) => {
   let param_email = req.query.member_email
-  let sql = 'SELECT member_email FROM member WHERE member_email = "' + param_email + '";'
+  let sql = 'SELECT member_email, member_secede, member_ban FROM member WHERE member_email = "' + param_email + '";'
   connection.query(sql, (err, rows, fields) => {
-    if (rows.length != 0) {
-      let is_email = rows[0].member_email
-      if (is_email === param_email) {
-        console.log(is_email + ' == ' + param_email)
-        res.send(true)
-      } else {
-        console.log(err)
-      }
+    if (err) {
+      console.log(err)
     } else {
-      console.log(param_email + 'Not Found')
-      res.send(false)
+      if (rows.length != 0) {
+        let is_email = rows[0].member_email
+        if (is_email === param_email) {
+          console.log(is_email + ' == ' + param_email)
+          if (rows[0].member_secede === 1 || rows[0].member_ban === 1) {
+            res.send('error1')
+          } else {
+            res.send('error2')
+          }
+        } else {
+          res.send('error3')
+        }
+      } else {
+        console.log(param_email + 'Not Found')
+        res.send(false)
+      }
     }
+
   });
 })
 
@@ -165,8 +174,9 @@ app.post('/member/signin', (req, res) => {
   const pwCrypto = pw => {
     return crypto.createHash('sha512').update(pw).digest('base64')
   }
-  let sql = 'SELECT member_email, member_pw FROM member WHERE member_email = "' + req.body.email + '";'
-  connection.query(sql, (err, rows, fields) => {
+  let sql = 'SELECT member_email, member_pw FROM member WHERE member_email = ? AND member_secede = ? AND member_ban = ?;'
+  let sql_params = [req.body.email, 0, 0]
+  connection.query(sql, sql_params, (err, rows, fields) => {
     if (err) {
       console.log(err)
       res.send(false)
@@ -335,7 +345,7 @@ app.patch('/member/repw', (req, res) => {
             console.log(err)
           } else {
             req.session.destroy()
-            res.redirect('/dddd')
+            res.redirect('/')
           }
         })
       }
@@ -348,17 +358,116 @@ app.patch('/member/repw', (req, res) => {
 //포인트 현황 조회
 app.get('/member/mypage/point', (req, res) => {
   let email = req.session.member_email
-  let point_sql = 'select member_point, save_point, use_point, member_rank from member where member_email = ' + email + ';'
+  let point_sql = 'select member_point, save_point, use_point, member_rank from member where member_email = "' + email + '";'
   connection.query(point_sql, (err, rows, field) => {
     if (err) {
       console.log(err)
       res.send(false)
     } else {
       console.log('rows', rows)
+      res.json(rows)
+    }
+  })
+})
+
+// 포인트 사용
+app.patch('/member/mypage/usepoint', (req, res) => {
+  const now = new Date();
+  let point = req.body.use_point
+  let contents = req.body.use_contents
+  let email = req.session.member_email
+  let point_sql = 'select member_point, save_point, use_point, member_rank from member where member_email = "' + email + '";'
+  connection.query(point_sql, (err, rows, field) => {
+    if (err) {
+      console.log(err)
+    } else {
+      if (rows[0].member_point < point) {
+        console.log(rows[0].member_point)
+        res.send(false)
+      } else {
+        let use_member_point = rows[0].member_point - point
+        let use_point = rows[0].use_point + point
+        let use_point_sql = 'update member set member_point = ?, use_point = ? where member_email = ?;' + 'insert into point (member_email, use_date, use_contents) values (?, ?, ?);'
+        let use_point_params = [use_member_point, use_point, email, email, now, contents]
+        connection.query(use_point_sql, use_point_params, (err, rows, field) => {
+          if (err) {
+            console.log(err)
+          } else {
+            console.log('use_point : ', use_point, 'member_point : ', member_point)
+            res.send(true)
+          }
+        })
+      }
+    }
+  })
+})
+
+//내 아이디어 조회
+app.get('/member/idea', (req, res) => {
+  let email = req.session.member_email
+  let idea_sql = 'select idea_title, idea_date from idea where member_email = "' + email + '";'
+  connection.query(idea_sql, (err, rows, field) => {
+    if (err) {
+      console.log(err)
+      res.send(false)
+    } else {
+      if (rows.length === 0) {
+        console.log('error')
+        res.send(false)
+      } else {
+        console.log('rows', rows)
+        res.json(rows)
+      }
+    }
+  })
+})
+
+// 관심사업 등록
+app.patch('/member/check', (req, res) => {
+  let email = req.session.member_email
+  let sele_sql = 'insert into inter_anno (member_email, anno_id) values (?, ?);'
+  let sele_params = [email, req.body.anno_key]
+  connection.query(sele_sql, sele_params, (err, rows, field) => {
+    if (err) {
+      console.log(err)
+      res.send(false)
+    } else {
+      console.log(rows)
       res.send(true)
     }
   })
 })
+
+//내 관심사업 조회
+//내일 sql join 하는거 알아보고 하기!!!!!! 중요********
+app.get('/member/marked', (req, res) => {
+  let email = req.session.member_email
+  let inanno_sql = 'select anno_id from inter_anno where member_email = "' + email + '";'
+  connection.query(inanno_sql, (err, rows, field) => {
+    if (err) {
+      console.log(err)
+      res.send(false)
+    } else {
+      let an_num = rows[0].anno_id
+      let anno_sql = 'select anno_id, anno_date, anno_title from anno where anno_id = ' + an_num + ';'
+      connection.query(anno_sql, (err, rows, field) => {
+        if (err) {
+          console.log(err)
+          res.send(false)
+        } else {
+          if (rows.length === 0) {
+            console.log('error')
+            res.send(false)
+          } else {
+            console.log('rows', rows)
+            res.json(rows)
+          }
+        }
+      })
+    }
+  })
+})
+
 
 app.get('/', (req, res) => {
   res.send('asdfsaf')

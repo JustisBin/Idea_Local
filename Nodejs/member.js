@@ -55,6 +55,8 @@ app.use(session({
   store: sessionStore
 }));
 
+
+/* 회원 관련 API */
 // 이용약관 확인
 // 선택약관에 체크시 결과값 반환, 
 // 동의(0) 할 경우 true, 비동의(1) 일 경우 false를 반환합니다.
@@ -182,30 +184,33 @@ app.post('/member/signin', (req, res) => {
       console.log(err)
       res.send(false)
     } else {
-
-      // 
-      // if (rows[0].member_email === req.body.email && rows[0].member_pw === pwCrypto(pw)) {
-      //   req.session.member_email = req.body.email
-      //   req.session.member_pw = pwCrypto(pw)
-      //   console.log(req.session.member_email)
-      //   console.log('email : ', rows[0].member_email, 'pw : ', rows[0].member_pw)
-      //   const now = new Date();
-      //   let log_sql = 'update member_log set member_login_lately = ? where member_email = ?;' + 'insert into member_login_log (member_email, member_login) values (? ,?);'
-      //   let log_params = [now, req.body.email, req.body.email, now]
-      //   connection.query(log_sql, log_params, (err, rows, fields) => {
-      //     if (err) {
-      //       console.log(err)
-      //       res.send('error')
-      //     } else {
-      //       req.session.save(() => {
-      //         res.redirect('/');
-      //       });
-      //       console.log('Success')
-      //     }
-      //   })
-      // } else {
-      //   res.send(false)
-      // }
+      if (rows.length === 0) {
+        console.log('Not found')
+        res.send(false)
+      } else {
+        if (rows[0].member_email === req.body.email && rows[0].member_pw === pwCrypto(pw)) {
+          req.session.member_email = req.body.email
+          req.session.member_pw = pwCrypto(pw)
+          console.log(req.session.member_email)
+          console.log('email : ', rows[0].member_email, 'pw : ', rows[0].member_pw)
+          const now = new Date();
+          let log_sql = 'update member_log set member_login_lately = ? where member_email = ?;' + 'insert into member_login_log (member_email, member_login) values (? ,?);'
+          let log_params = [now, req.body.email, req.body.email, now]
+          connection.query(log_sql, log_params, (err, rows, fields) => {
+            if (err) {
+              console.log(err)
+              res.send('error')
+            } else {
+              req.session.save(() => {
+                res.redirect('/');
+              });
+              console.log('Success')
+            }
+          })
+        } else {
+          res.send(false)
+        }
+      }
     }
   })
 })
@@ -520,6 +525,87 @@ app.delete('/member/deletecheck', (req, res) => {
   })
 })
 
+
+/* 관리자 관련 API */
+
+// 관리자 등록 
+app.post('/admin/signup', (req, res) => {
+  const pw = req.body.admin_pw
+  const pwCrypto = pw => {
+    return crypto.createHash('sha512').update(pw).digest('base64')    // 비밀번호 해시화
+  }
+  const now = new Date();
+  let sql = 'insert into admin (admin_email, admin_name, admin_sex, admin_birth, admin_state, admin_pw, admin_phone) values (?, ?, ?, ?, ?, ?, ?);' + 'insert into admin_log (admin_email, admin_log_join) values (?, ?);'
+  let params = [req.body.admin_email, req.body.admin_name, req.body.admin_sex, req.body.admin_birth, req.body.admin_state, pwCrypto(pw), req.body.admin_phone, req.body.admin_email, now]
+  connection.query(sql, params, (err, rows, fields) => {
+    if (err) {
+      console.log(err)
+      res.send(false)
+    } else {
+      console.log('rows : ', rows)
+      res.send(true)
+    }
+  })
+})
+
+// 관리자 로그인
+app.post('/admin/signin', (req, res) => {
+  const pw = req.body.admin_password
+  const pwCrypto = pw => {
+    return crypto.createHash('sha512').update(pw).digest('base64')
+  }
+  let sql = 'SELECT admin_email, admin_pw FROM admin WHERE admin_email = ? AND admin_secede = ?;'
+  let sql_params = [req.body.admin_email, 0]
+  connection.query(sql, sql_params, (err, rows, fields) => {
+    if (err) {
+      console.log(err)
+      res.send(false)
+    } else {
+      if (rows.length === 0) {
+        console.log('Not found')
+        res.send(false)
+      } else {
+        if (rows[0].admin_email === req.body.admin_email && rows[0].admin_pw === pwCrypto(pw)) {
+          req.session.admin_email = req.body.admin_email
+          req.session.admin_pw = pwCrypto(pw)
+          console.log(req.session.admin_email)
+          console.log('email : ', rows[0].admin_email, 'pw : ', rows[0].admin_pw)
+          const now = new Date();
+          let log_sql = 'update admin_log set admin_login_lately = ? where admin_email = ?;'
+          let log_params = [now, req.body.admin_email]
+          connection.query(log_sql, log_params, (err, rows, fields) => {
+            if (err) {
+              console.log(err)
+              res.send('error')
+            } else {
+              req.session.save(() => {
+                res.redirect('/');
+              });
+              console.log('Success')
+            }
+          })
+        } else {
+          res.send(false)
+        }
+      }
+    }
+  })
+})
+
+// 특정 회원정보 조회
+// app.get('admin/getmember', (req, res) => {
+//   let email = req.query.member_email
+//   let get_sql = 'select * from member where member_email = "' + email + '";'
+//   connection.query(get_sql, (err, rows, field) => {
+//     if (err) {
+//       console.log(err)
+//       res.send(false)
+//     } else {
+//       console.log(rows)
+//       res.json(rows)
+//     }
+//   })
+// })
 
 app.get('/', (req, res) => {
   res.send('asdfsaf')

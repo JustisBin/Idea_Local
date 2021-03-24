@@ -182,28 +182,30 @@ app.post('/member/signin', (req, res) => {
       console.log(err)
       res.send(false)
     } else {
-      if (rows[0].member_email === req.body.email && rows[0].member_pw === pwCrypto(pw)) {
-        req.session.member_email = req.body.email
-        req.session.member_pw = pwCrypto(pw)
-        console.log(req.session.member_email)
-        console.log('email : ', rows[0].member_email, 'pw : ', rows[0].member_pw)
-        const now = new Date();
-        let log_sql = 'update member_log set member_login_lately = ? where member_email = ?;' + 'insert into member_login_log (member_email, member_login) values (? ,?);'
-        let log_params = [now, req.body.email, req.body.email, now]
-        connection.query(log_sql, log_params, (err, rows, fields) => {
-          if (err) {
-            console.log(err)
-            res.send('error')
-          } else {
-            req.session.save(() => {
-              res.redirect('/');
-            });
-            console.log('Success')
-          }
-        })
-      } else {
-        res.send(false)
-      }
+
+      // 
+      // if (rows[0].member_email === req.body.email && rows[0].member_pw === pwCrypto(pw)) {
+      //   req.session.member_email = req.body.email
+      //   req.session.member_pw = pwCrypto(pw)
+      //   console.log(req.session.member_email)
+      //   console.log('email : ', rows[0].member_email, 'pw : ', rows[0].member_pw)
+      //   const now = new Date();
+      //   let log_sql = 'update member_log set member_login_lately = ? where member_email = ?;' + 'insert into member_login_log (member_email, member_login) values (? ,?);'
+      //   let log_params = [now, req.body.email, req.body.email, now]
+      //   connection.query(log_sql, log_params, (err, rows, fields) => {
+      //     if (err) {
+      //       console.log(err)
+      //       res.send('error')
+      //     } else {
+      //       req.session.save(() => {
+      //         res.redirect('/');
+      //       });
+      //       console.log('Success')
+      //     }
+      //   })
+      // } else {
+      //   res.send(false)
+      // }
     }
   })
 })
@@ -371,6 +373,20 @@ app.get('/member/mypage/point', (req, res) => {
   })
 })
 
+//회원탈퇴
+app.patch('/member/mypage/deletemember', (req, res) => {
+  let email = req.session.member_email
+  let delmem_sql = 'update member set member_secede = 1 where member_email = "' + email + '";'
+  connection.query(delmem_sql, (err, rows, field) => {
+    if (err) {
+      console.log(err)
+      res.send(false)
+    } else {
+      res.send(true)
+    }
+  })
+})
+
 //포인트 사용내역 조회
 app.get('/member/mypage/usepointlist', (req, res) => {
   let email = req.session.member_email
@@ -485,6 +501,21 @@ app.get('/member/marked', (req, res) => {
         console.log('rows', rows)
         res.json(rows)
       }
+    }
+  })
+})
+
+//내 관심사업 해제
+app.delete('/member/deletecheck', (req, res) => {
+  let email = req.session.member_email
+  let delchk_sql = 'delete from inter_anno where anno_id = ' + req.query.anno_id + ' AND member_email = "' + email + '";'
+  connection.query(delchk_sql, (err, rows, field) => {
+    if (err) {
+      console.log(err)
+      res.send(false)
+    } else {
+      console.log(rows)
+      res.send(true)
     }
   })
 })

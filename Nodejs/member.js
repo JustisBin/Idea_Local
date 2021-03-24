@@ -69,14 +69,73 @@ app.post('/member/agreemember', (req, res) => {
   }
 })
 
+// 이메일 인증
+// 이메일 중복확인 후, 이메일 인증 링크를 메일로 전송하여 회원가입 진행.
+app.post('/member/pass-email', (req, res) => {
+  const ranNum = (min, max) => {
+    return Math.floor(Math.random() * (max - min + 1)) + min
+  }
+  let num = String(ranNum(111111, 999999))
+  req.session.token = num
+  setTimeout(() => delete req.session.token, 300000)  // 이메일 키 유효기간 설정(5분)
+
+  let mailOptions = {
+    from: "dmlqls2822@naver.com",
+    to: req.body.mail,
+    subject: "[아이디어플랫폼]인증메일",
+    html: "<p>아래의 인증번호를 입력해주세요.</p>" + num  // 인증번호 전송
+  };
+  smtpTransport.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.log(err);
+      res.send(false);
+    } else {
+      res.send(true)
+    }
+  });
+  smtpTransport.close();
+});
+
 // 이메일 인증번호 확인. 확인시 true 반환
 app.get('/member/signup/checktoken', (req, res) => {
-  if (req.query.param === req.session.token) {
+  if (req.query.token === req.session.token) {
+    delete req.session.token
     res.send(true)
   }
   else {
     res.send(false)
   }
+})
+
+// 이메일 중복확인
+// DB member table 에서 일치하는 이메일 검색 후 중복되는 값이 있을 경우 true,
+// 중복이 아닐경우 false 반환
+app.get('/member/check-email', (req, res) => {
+  let param_email = req.query.member_email
+  let sql = 'SELECT member_email, member_secede, member_ban FROM member WHERE member_email = "' + param_email + '";'
+  connection.query(sql, (err, rows, fields) => {
+    if (err) {
+      console.log(err)
+    } else {
+      if (rows.length != 0) {
+        let is_email = rows[0].member_email
+        if (is_email === param_email) {
+          console.log(is_email + ' == ' + param_email)
+          if (rows[0].member_secede === 1 || rows[0].member_ban === 1) {
+            res.send('error1')
+          } else {
+            res.send('error2')
+          }
+        } else {
+          res.send('error3')
+        }
+      } else {
+        console.log(param_email + 'Not Found')
+        res.send(true)
+      }
+    }
+
+  });
 })
 
 // 회원가입
@@ -109,64 +168,6 @@ app.post('/member/signup', (req, res) => {
     }
   })
 })
-
-// 이메일 중복확인
-// DB member table 에서 일치하는 이메일 검색 후 중복되는 값이 있을 경우 true,
-// 중복이 아닐경우 false 반환
-app.get('/member/check-email', (req, res) => {
-  let param_email = req.query.member_email
-  let sql = 'SELECT member_email, member_secede, member_ban FROM member WHERE member_email = "' + param_email + '";'
-  connection.query(sql, (err, rows, fields) => {
-    if (err) {
-      console.log(err)
-    } else {
-      if (rows.length != 0) {
-        let is_email = rows[0].member_email
-        if (is_email === param_email) {
-          console.log(is_email + ' == ' + param_email)
-          if (rows[0].member_secede === 1 || rows[0].member_ban === 1) {
-            res.send('error1')
-          } else {
-            res.send('error2')
-          }
-        } else {
-          res.send('error3')
-        }
-      } else {
-        console.log(param_email + 'Not Found')
-        res.send(false)
-      }
-    }
-
-  });
-})
-
-// 이메일 인증
-// 이메일 중복확인 후, 이메일 인증 링크를 메일로 전송하여 회원가입 진행.
-app.post('/member/pass-email', (req, res) => {
-  const ranNum = (min, max) => {
-    return Math.floor(Math.random() * (max - min + 1)) + min
-  }
-  let num = String(ranNum(111111, 999999))
-  req.session.token = num
-  setTimeout(() => delete req.session.token, 300000)  // 이메일 키 유효기간 설정(5분)
-
-  let mailOptions = {
-    from: "dmlqls2822@naver.com",
-    to: email,
-    subject: "[아이디어플랫폼]인증메일",
-    html: "<p>아래의 인증번호를 입력해주세요.</p>" + num  // 인증번호 전송
-  };
-  smtpTransport.sendMail(mailOptions, (err, info) => {
-    if (err) {
-      console.log(err);
-      res.send(false);
-    } else {
-      res.send(true)
-    }
-  });
-  smtpTransport.close();
-});
 
 //회원로그인
 app.post('/member/signin', (req, res) => {
@@ -370,6 +371,36 @@ app.get('/member/mypage/point', (req, res) => {
   })
 })
 
+//포인트 사용내역 조회
+app.get('/member/mypage/usepointlist', (req, res) => {
+  let email = req.session.member_email
+  let uselist_sql = 'select point.use_contents, point.point, point.use_date FROM point INNER JOIN member mem ON mem.member_email = point.member_email where mem.member_email = "' + email + '";'
+  connection.query(uselist_sql, (err, rows, field) => {
+    if (err) {
+      console.log(err)
+      res.send(false)
+    } else {
+      console.log('rows', rows)
+      res.json(rows)
+    }
+  })
+})
+
+// 포인트 적립내역 조회
+app.get('/member/mypage/savepointlist', (req, res) => {
+  let email = req.session.member_email
+  let savelist_sql = 'select idea.idea_title, idea.add_point, idea.date_point FROM idea INNER JOIN member mem ON mem.member_email = idea.member_email where mem.member_email = "' + email + '";'
+  connection.query(savelist_sql, (err, rows, field) => {
+    if (err) {
+      console.log(err)
+      res.send(false)
+    } else {
+      console.log('rows', rows)
+      res.json(rows)
+    }
+  })
+})
+
 // 포인트 사용
 app.patch('/member/mypage/usepoint', (req, res) => {
   const now = new Date();
@@ -387,8 +418,8 @@ app.patch('/member/mypage/usepoint', (req, res) => {
       } else {
         let use_member_point = rows[0].member_point - point
         let use_point = rows[0].use_point + point
-        let use_point_sql = 'update member set member_point = ?, use_point = ? where member_email = ?;' + 'insert into point (member_email, use_date, use_contents) values (?, ?, ?);'
-        let use_point_params = [use_member_point, use_point, email, email, now, contents]
+        let use_point_sql = 'update member set member_point = ?, use_point = ? where member_email = ?;' + 'insert into point (member_email, use_date, use_contents, point) values (?, ?, ?, ?);'
+        let use_point_params = [use_member_point, use_point, email, email, now, contents, point]
         connection.query(use_point_sql, use_point_params, (err, rows, field) => {
           if (err) {
             console.log(err)
@@ -439,31 +470,21 @@ app.patch('/member/check', (req, res) => {
 })
 
 //내 관심사업 조회
-//내일 sql join 하는거 알아보고 하기!!!!!! 중요********
 app.get('/member/marked', (req, res) => {
   let email = req.session.member_email
-  let inanno_sql = 'select anno_id from inter_anno where member_email = "' + email + '";'
-  connection.query(inanno_sql, (err, rows, field) => {
+  let anno_sql = 'select an.anno_id, an.anno_title, an.anno_date FROM member mem INNER JOIN inter_anno inan ON mem.member_email = inan.member_email INNER JOIN anno an ON inan.anno_id = an.anno_id where mem.member_email = "' + email + '";'
+  connection.query(anno_sql, (err, rows, field) => {
     if (err) {
       console.log(err)
       res.send(false)
     } else {
-      let an_num = rows[0].anno_id
-      let anno_sql = 'select anno_id, anno_date, anno_title from anno where anno_id = ' + an_num + ';'
-      connection.query(anno_sql, (err, rows, field) => {
-        if (err) {
-          console.log(err)
-          res.send(false)
-        } else {
-          if (rows.length === 0) {
-            console.log('error')
-            res.send(false)
-          } else {
-            console.log('rows', rows)
-            res.json(rows)
-          }
-        }
-      })
+      if (rows.length === 0) {
+        console.log('error')
+        res.send(false)
+      } else {
+        console.log('rows', rows)
+        res.json(rows)
+      }
     }
   })
 })

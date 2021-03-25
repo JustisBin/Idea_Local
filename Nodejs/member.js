@@ -493,7 +493,7 @@ app.patch('/member/check', (req, res) => {
 //내 관심사업 조회
 app.get('/member/marked', (req, res) => {
   let email = req.session.member_email
-  let anno_sql = 'select an.anno_id, an.anno_title, an.anno_date FROM member mem INNER JOIN inter_anno inan ON mem.member_email = inan.member_email INNER JOIN anno an ON inan.anno_id = an.anno_id where mem.member_email = "' + email + '";'
+  let anno_sql = 'select an.anno_id, an.anno_title, an.anno_date FROM member mem INNER JOIN inter_anno inan ON mem.member_email = inan.member_email INNER JOIN anno an ON inan.anno_id = an.anno_id AND mem.member_email = "' + email + '" AND an.anno_delete = 0;'
   connection.query(anno_sql, (err, rows, field) => {
     if (err) {
       console.log(err)
@@ -606,6 +606,66 @@ app.post('/admin/signin', (req, res) => {
 //     }
 //   })
 // })
+
+/* 게시판 관련 API */
+
+// 아이디어 등록
+app.post('/idea/newidea', (req, res) => {
+  let email = req.session.member_email
+  let now = new Date()
+  let newIdea_sql = 'insert into idea (idea_title, idea_contents, idea_date, member_email) values (?, ?, ?, ?);'
+  let newIdea_params = [req.body.title, req.body.contents, now, email]
+  connection.query(newIdea_sql, newIdea_params, (err, rows, field) => {
+    if (err) {
+      console.log(err)
+      res.send(false)
+    } else {
+      console.log(rows)
+      res.send(true)
+    }
+  })
+})
+
+// 아이디어 수정
+app.patch('/idea/patchidea', (req, res) => {
+  let email = req.session.member_email
+  let key = req.body.key
+  let now = new Date()
+  let patch_sql = 'select idea_contents from idea where member_email = ? AND idea_id = ?'
+  let patch_params = [email, key]
+  connection.query(patch_sql, patch_params, (err, rows, field) => {
+    if (err) {
+      console.log(err)
+      res.send(false)
+    } else {
+      let oldContents = rows[0].idea_contents
+      let update_sql = 'update idea set idea_contents = ? where idea_id = ?;' + 'update idea_log set idea_id = ?, idea_contents = ?, idea_edit_date = ?;' //수정필요 로그값 x 에서 업뎃 안됨
+      let update_patch = [req.body.contents, key, key, oldContents, now]
+      connection.query(update_sql, update_patch, (err, rows, field) => {
+        if (err) {
+          console.log(err)
+          res.send(false)
+        } else {
+          res.send(true)
+        }
+      })
+    }
+  })
+})
+
+// 아이디어 게시물 조회
+app.get('/idea/listidea', (req, res) => {
+  let listIdea_sql = 'select idea_title, idea_date from idea'
+  connection.query(listIdea_sql, (err, rows, field) => {
+    if (err) {
+      console.log(err)
+      res.send(false)
+    } else {
+      console.log(rows)
+      res.json(rows)
+    }
+  })
+})
 
 app.get('/', (req, res) => {
   res.send('asdfsaf')

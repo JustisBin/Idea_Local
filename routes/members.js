@@ -1,20 +1,7 @@
-const dotenv = require('dotenv')
-const express = require('express')
-const app = express()
-app.use(express.json())
-const nodemailer = require('nodemailer')
-const mysql = require('mysql')
-const crypto = require('crypto')
-const session = require('express-session');
-const { read } = require('fs')
-const MySQLStore = require('express-mysql-session')(session);
-dotenv.config({
-  path: '/Users/jeong-uibin/Documents/Idle_1st/process.env'
-});
-const port = process.env.SERVER_PORT
-
-//데이터 베이스 연결
-const connection = mysql.createConnection({
+var express = require('express');
+let mysql = require('mysql')
+var router = express.Router();
+let connection = mysql.createConnection({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   user: process.env.DB_USER,
@@ -23,45 +10,11 @@ const connection = mysql.createConnection({
   multipleStatements: true
 });
 
-connection.connect();
-
-// 메일전송 연결
-const smtpTransport = nodemailer.createTransport({
-  service: process.env.SERVICE_NAME,
-  auth: {
-    user: process.env.STMP_USER,
-    pass: process.env.STMP_PW
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
-});
-
-// 세션 저장 연결
-const options = {
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PW,		//데이터베이스 접근 비밀번호
-  database: process.env.DB_USE		//데이터베이스의 이름
-};
-
-const sessionStore = new MySQLStore(options);
-
-// 세션 사용 설정
-app.use(session({
-  secret: process.env.SECRET_KEY,
-  resave: false,
-  saveUninitialized: true,
-  store: sessionStore
-}));
-
-
 /* 회원 관련 API */
 // 이용약관 확인
 // 선택약관에 체크시 결과값 반환, 
 // 동의(0) 할 경우 true, 비동의(1) 일 경우 false를 반환합니다.
-app.post('/member/agreemember', (req, res) => {
+router.post('/member/agreemember', (req, res) => {
   let agree = req.body.chosen_agree;
   if (agree === 0) {
     req.session.chosen = 0
@@ -74,7 +27,7 @@ app.post('/member/agreemember', (req, res) => {
 
 // 이메일 인증
 // 이메일 중복확인 후, 이메일 인증 링크를 메일로 전송하여 회원가입 진행.
-app.post('/member/pass-email', (req, res) => {
+router.post('/member/pass-email', (req, res) => {
   const ranNum = (min, max) => {
     return Math.floor(Math.random() * (max - min + 1)) + min
   }
@@ -100,7 +53,7 @@ app.post('/member/pass-email', (req, res) => {
 });
 
 // 이메일 인증번호 확인. 확인시 true 반환
-app.get('/member/signup/checktoken', (req, res) => {
+router.get('/member/signup/checktoken', (req, res) => {
   if (req.query.token === req.session.token) {
     delete req.session.token
     res.send(true)
@@ -113,7 +66,7 @@ app.get('/member/signup/checktoken', (req, res) => {
 // 이메일 중복확인
 // DB member table 에서 일치하는 이메일 검색 후 중복되는 값이 있을 경우 true,
 // 중복이 아닐경우 false 반환
-app.get('/member/check-email', (req, res) => {
+router.get('/member/check-email', (req, res) => {
   let param_email = req.query.member_email
   let sql = 'SELECT member_email, member_secede, member_ban FROM member WHERE member_email = "' + param_email + '";'
   connection.query(sql, (err, rows, fields) => {
@@ -142,7 +95,7 @@ app.get('/member/check-email', (req, res) => {
 })
 
 // 회원가입
-app.post('/member/signup', (req, res) => {
+router.post('/member/signup', (req, res) => {
   const pw = req.body.member_pw
   const pwCrypto = pw => {
     return crypto.createHash('sha512').update(pw).digest('base64')    // 비밀번호 해시화
@@ -173,7 +126,7 @@ app.post('/member/signup', (req, res) => {
 })
 
 //회원로그인
-app.post('/member/signin', (req, res) => {
+router.post('/member/signin', (req, res) => {
   const pw = req.body.password
   const pwCrypto = pw => {
     return crypto.createHash('sha512').update(pw).digest('base64')
@@ -217,13 +170,13 @@ app.post('/member/signin', (req, res) => {
 })
 
 //회원 로그아웃
-app.get('/member/logout', (req, res) => {
+router.get('/member/logout', (req, res) => {
   req.session.destroy((err) => { })
   res.redirect('/')
 })
 
 // 회원정보 수정 전 비밀번호 재확인
-app.post('/member/mypage/update', (req, res) => {
+router.post('/member/mypage/update', (req, res) => {
   const pw = req.body.member_pw
   const pwCrypto = pw => {
     return crypto.createHash('sha512').update(pw).digest('base64')
@@ -237,7 +190,7 @@ app.post('/member/mypage/update', (req, res) => {
 })
 
 //회원정보 수정
-app.patch('/member/mypage/resetmypage', (req, res) => {
+router.patch('/member/mypage/resetmypage', (req, res) => {
   const pw = req.body.member_pw
   const pwCrypto = pw => {
     return crypto.createHash('sha512').update(pw).digest('base64')
@@ -262,7 +215,7 @@ app.patch('/member/mypage/resetmypage', (req, res) => {
 })
 
 // 비밀번호 찾기
-app.post('/member/findpassword', (req, res) => {
+router.post('/member/findpassword', (req, res) => {
   let sql = 'SELECT member_email FROM member WHERE member_email = "' + req.body.mail + '";'   //이메일 입력 시 해당 가입자가 존재하는지 확인.
   connection.query(sql, (err, rows, fields) => {
     if (err) {
@@ -304,7 +257,7 @@ app.post('/member/findpassword', (req, res) => {
 
 // 비밀번호재설정 링크
 // 이메일에서 LINK 클릭 시 token값을 비교하여 유효여부를 판단 후 반환
-app.get(/resetpassword/, (req, res) => {
+router.get(/resetpassword/, (req, res) => {
   const now = new Date();
   let variable = req.path.split("/")
   req.session.token = variable[3]   // 세션에 토큰 값 저장
@@ -333,7 +286,7 @@ app.get(/resetpassword/, (req, res) => {
 })
 
 // 비밀번호 재설정
-app.patch('/member/repw', (req, res) => {
+router.patch('/member/repw', (req, res) => {
   if (req.body.pw === req.body.repw) {
     const pw = req.body.member_pw
     const pwCrypto = pw => {
@@ -366,7 +319,7 @@ app.patch('/member/repw', (req, res) => {
 })
 
 //포인트 현황 조회
-app.get('/member/mypage/point', (req, res) => {
+router.get('/member/mypage/point', (req, res) => {
   let email = req.session.member_email
   let point_sql = 'select member_point, save_point, use_point, member_rank from member where member_email = "' + email + '";'
   connection.query(point_sql, (err, rows, field) => {
@@ -381,7 +334,7 @@ app.get('/member/mypage/point', (req, res) => {
 })
 
 //회원탈퇴
-app.patch('/member/mypage/deletemember', (req, res) => {
+router.patch('/member/mypage/deletemember', (req, res) => {
   let email = req.session.member_email
   let delmem_sql = 'update member set member_secede = 1 where member_email = "' + email + '";'
   connection.query(delmem_sql, (err, rows, field) => {
@@ -395,7 +348,7 @@ app.patch('/member/mypage/deletemember', (req, res) => {
 })
 
 //포인트 사용내역 조회
-app.get('/member/mypage/usepointlist', (req, res) => {
+router.get('/member/mypage/usepointlist', (req, res) => {
   let email = req.session.member_email
   let uselist_sql = 'select point.use_contents, point.point, point.use_date FROM point INNER JOIN member mem ON mem.member_email = point.member_email where mem.member_email = "' + email + '";'
   connection.query(uselist_sql, (err, rows, field) => {
@@ -410,7 +363,7 @@ app.get('/member/mypage/usepointlist', (req, res) => {
 })
 
 // 포인트 적립내역 조회
-app.get('/member/mypage/savepointlist', (req, res) => {
+router.get('/member/mypage/savepointlist', (req, res) => {
   let email = req.session.member_email
   let savelist_sql = 'select idea.idea_title, idea.add_point, idea.date_point FROM idea INNER JOIN member mem ON mem.member_email = idea.member_email where mem.member_email = "' + email + '";'
   connection.query(savelist_sql, (err, rows, field) => {
@@ -425,7 +378,7 @@ app.get('/member/mypage/savepointlist', (req, res) => {
 })
 
 // 포인트 사용
-app.patch('/member/mypage/usepoint', (req, res) => {
+router.patch('/member/mypage/usepoint', (req, res) => {
   const now = new Date();
   let point = req.body.use_point
   let contents = req.body.use_contents
@@ -457,7 +410,7 @@ app.patch('/member/mypage/usepoint', (req, res) => {
 })
 
 //내 아이디어 조회
-app.get('/member/idea', (req, res) => {
+router.get('/member/idea', (req, res) => {
   let email = req.session.member_email
   let idea_sql = 'select idea_title, idea_date from idea where member_email = "' + email + '";'
   connection.query(idea_sql, (err, rows, field) => {
@@ -477,7 +430,7 @@ app.get('/member/idea', (req, res) => {
 })
 
 // 관심사업 등록
-app.patch('/member/check', (req, res) => {
+router.patch('/member/check', (req, res) => {
   let email = req.session.member_email
   let sele_sql = 'insert into inter_anno (member_email, anno_id) values (?, ?);'
   let sele_params = [email, req.body.anno_key]
@@ -493,7 +446,7 @@ app.patch('/member/check', (req, res) => {
 })
 
 //내 관심사업 조회
-app.get('/member/marked', (req, res) => {
+router.get('/member/marked', (req, res) => {
   let email = req.session.member_email
   let anno_sql = 'select an.anno_id, an.anno_title, an.anno_date FROM member mem INNER JOIN inter_anno inan ON mem.member_email = inan.member_email INNER JOIN anno an ON inan.anno_id = an.anno_id AND mem.member_email = "' + email + '" AND an.anno_delete = 0;'
   connection.query(anno_sql, (err, rows, field) => {
@@ -513,7 +466,7 @@ app.get('/member/marked', (req, res) => {
 })
 
 //내 관심사업 해제
-app.delete('/member/deletecheck', (req, res) => {
+router.delete('/member/deletecheck', (req, res) => {
   let email = req.session.member_email
   let delchk_sql = 'delete from inter_anno where anno_id = ' + req.query.anno_id + ' AND member_email = "' + email + '";'
   connection.query(delchk_sql, (err, rows, field) => {
@@ -531,7 +484,7 @@ app.delete('/member/deletecheck', (req, res) => {
 /* 관리자 관련 API */
 
 // 관리자 등록 
-app.post('/admin/signup', (req, res) => {
+router.post('/admin/signup', (req, res) => {
   const pw = req.body.admin_pw
   const pwCrypto = pw => {
     return crypto.createHash('sha512').update(pw).digest('base64')    // 비밀번호 해시화
@@ -551,7 +504,7 @@ app.post('/admin/signup', (req, res) => {
 })
 
 // 관리자 로그인
-app.post('/admin/signin', (req, res) => {
+router.post('/admin/signin', (req, res) => {
   const pw = req.body.admin_password
   const pwCrypto = pw => {
     return crypto.createHash('sha512').update(pw).digest('base64')
@@ -595,7 +548,7 @@ app.post('/admin/signin', (req, res) => {
 })
 
 // 특정 회원정보 조회
-// app.get('admin/getmember', (req, res) => {
+// router.get('admin/getmember', (req, res) => {
 //   let email = req.query.member_email
 //   let get_sql = 'select * from member where member_email = "' + email + '";'
 //   connection.query(get_sql, (err, rows, field) => {
@@ -612,7 +565,7 @@ app.post('/admin/signin', (req, res) => {
 /* 게시판 관련 API */
 
 // 아이디어 등록 (수정중)
-app.post('/idea/newidea', (req, res) => {
+router.post('/idea/newidea', (req, res) => {
   let email = req.session.member_email
   let now = new Date()
   let newIdea_sql = 'insert into idea (idea_title, idea_contents, idea_date, member_email) values (?, ?, ?, ?);'
@@ -637,7 +590,7 @@ app.post('/idea/newidea', (req, res) => {
 })
 
 // 아이디어 수정 (수정중)
-app.patch('/idea/patchidea', (req, res) => {
+router.patch('/idea/patchidea', (req, res) => {
   let email = req.session.member_email
   let key = req.body.key
   let now = new Date()
@@ -664,7 +617,7 @@ app.patch('/idea/patchidea', (req, res) => {
 })
 
 // 아이디어 게시물 조회
-app.get('/idea/listidea', (req, res) => {
+router.get('/idea/listidea', (req, res) => {
   let listIdea_sql = 'select idea_title, idea_date from idea where idea_delete = 0'
   connection.query(listIdea_sql, (err, rows, field) => {
     if (err) {
@@ -677,10 +630,9 @@ app.get('/idea/listidea', (req, res) => {
   })
 })
 
-app.get('/', (req, res) => {
+router.get('/', (req, res) => {
   res.send('asdfsaf')
 });
 
-app.listen(port, () => {
-  console.log(`listen ${port}`)
-})
+
+module.exports = router;

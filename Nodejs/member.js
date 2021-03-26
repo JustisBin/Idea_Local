@@ -263,16 +263,16 @@ app.patch('/member/mypage/resetmypage', (req, res) => {
 
 // 비밀번호 찾기
 app.post('/member/findpassword', (req, res) => {
-  let sql = 'SELECT member_email FROM member WHERE member_email = "' + req.body.mail + '";'
+  let sql = 'SELECT member_email FROM member WHERE member_email = "' + req.body.mail + '";'   //이메일 입력 시 해당 가입자가 존재하는지 확인.
   connection.query(sql, (err, rows, fields) => {
     if (err) {
       console.log(err)
     } else {
-      if (rows[0].member_email === req.body.mail) {
+      if (rows[0].member_email === req.body.mail) {   // 해당 이메일이 존재 시
         const now = new Date();
-        const tomorrow = new Date(now.setDate(now.getDate() + 1));
-        const token = crypto.randomBytes(20).toString('hex')
-        let pw_sql = 'insert into pw_find (pw_key, pw_date, member_email) values (?, ?, ?);'
+        const tomorrow = new Date(now.setDate(now.getDate() + 1));    // link의 유효기간 설정
+        const token = crypto.randomBytes(20).toString('hex')    // 20자리의 랜덤 토큰 생성
+        let pw_sql = 'insert into pw_find (pw_key, pw_date, member_email) values (?, ?, ?);'    // 비밀번호 찾기 관련 테이블에 토큰 유효기간, 이메일 저장.
         let params = [token, tomorrow, req.body.mail]
         connection.query(pw_sql, params, (err, rows, fields) => {
           if (err) {
@@ -282,8 +282,7 @@ app.post('/member/findpassword', (req, res) => {
               from: "dmlqls2822@naver.com",
               to: req.body.mail,
               subject: "[아이디어플랫폼] 비밀번호 재설정",
-              // html: "<a href='localhost:3000/aaa'>aaaa</a>"
-              html: `<p>아래의 링크를 클릭해주세요 </p> <a href=${process.env.DB_HOST}:3000/member/resetpassword/${token}/${req.body.mail}>인증하기</a>`
+              html: `<p>아래의 링크를 클릭해주세요 </p> <a href=${process.env.DB_HOST}:3000/member/resetpassword/${token}/${req.body.mail}>인증하기</a>`    // 토큰과 이메일이 포함된 링크 전송.
             };
             smtpTransport.sendMail(mailOptions, (err, info) => {
               if (err) {
@@ -303,21 +302,21 @@ app.post('/member/findpassword', (req, res) => {
   })
 })
 
-// 비밀번호재설정페이지
+// 비밀번호재설정 링크
 // 이메일에서 LINK 클릭 시 token값을 비교하여 유효여부를 판단 후 반환
 app.get(/resetpassword/, (req, res) => {
   const now = new Date();
   let variable = req.path.split("/")
-  req.session.token = variable[3]
-  req.session.us_mail = variable[4]
-  let reset_sql = 'select pw_key, pw_dispose, pw_date from pw_find where pw_key = "' + req.session.token + '";'
+  req.session.token = variable[3]   // 세션에 토큰 값 저장
+  req.session.us_mail = variable[4]   // 세션에 이메일 저장
+  let reset_sql = 'select pw_key, pw_dispose, pw_date from pw_find where pw_key = "' + req.session.token + '";'   // 해당 링크의 유효여부를 확인.
   connection.query(reset_sql, (err, rows, field) => {
     if (err) {
       console.log(err)
       res.send(false)
     } else {
-      if (rows[0].pw_dispose === 0 && rows[0].pw_date < now) {
-        let date_sql = 'update pw_find set pw_dispose = 1 where pw_key = "' + req.session.token + '";'
+      if (rows[0].pw_dispose === 0 && rows[0].pw_date < now) {    // 유효한 링크
+        let date_sql = 'update pw_find set pw_dispose = 1 where pw_key = "' + req.session.token + '";'    // 해당 토큰의 폐기여부 업데이트
         connection.query(date_sql, (err, rows, field) => {
           if (err) {
             console.log(err)
@@ -327,7 +326,7 @@ app.get(/resetpassword/, (req, res) => {
           }
         })
       } else {
-        res.send(false)
+        res.send(false)   // 유효하지 않은 링크
       }
     }
   })
@@ -340,7 +339,7 @@ app.patch('/member/repw', (req, res) => {
     const pwCrypto = pw => {
       return crypto.createHash('sha512').update(pw).digest('base64')
     }
-    let pw_sql = 'update member set member_pw = ? where member_email = "' + req.session.us_mail + '";'
+    let pw_sql = 'update member set member_pw = ? where member_email = "' + req.session.us_mail + '";'    // 입력받은 pw를 업데이트
     let pw_param = [pwCrypto(pw)]
     connection.query(pw_sql, pw_param, (err, rows, field) => {
       delete req.session.us_mail
@@ -349,7 +348,7 @@ app.patch('/member/repw', (req, res) => {
         console.log(err)
         res.send(false)
       } else {
-        let log_sql = 'update pw_find set pw_edit = ?, pw_dispose = ? where pw_key = "' + req.session.token + '";'
+        let log_sql = 'update pw_find set pw_edit = ?, pw_dispose = ? where pw_key = "' + req.session.token + '";'  // 토큰 완전폐기
         let log_params = [1, 1]
         connection.query(log_sql, log_params, (err, rows, field) => {
           if (err) {

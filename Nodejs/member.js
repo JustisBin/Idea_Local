@@ -6,6 +6,7 @@ const nodemailer = require('nodemailer')
 const mysql = require('mysql')
 const crypto = require('crypto')
 const session = require('express-session');
+const { read } = require('fs')
 const MySQLStore = require('express-mysql-session')(session);
 dotenv.config({
   path: '/Users/jeong-uibin/Documents/Idle_1st/process.env'
@@ -295,6 +296,8 @@ app.post('/member/findpassword', (req, res) => {
             smtpTransport.close();
           }
         });
+      } else {
+        res.send(false)
       }
     }
   })
@@ -320,11 +323,11 @@ app.get(/resetpassword/, (req, res) => {
             console.log(err)
             res.send(false)
           } else {
-            res.send(false)
+            res.send(true)
           }
         })
       } else {
-        res.send(true)
+        res.send(false)
       }
     }
   })
@@ -609,7 +612,7 @@ app.post('/admin/signin', (req, res) => {
 
 /* 게시판 관련 API */
 
-// 아이디어 등록
+// 아이디어 등록 (수정중)
 app.post('/idea/newidea', (req, res) => {
   let email = req.session.member_email
   let now = new Date()
@@ -620,13 +623,21 @@ app.post('/idea/newidea', (req, res) => {
       console.log(err)
       res.send(false)
     } else {
-      console.log(rows)
-      res.send(true)
+      let logIdea_sql = 'insert into idea_log(idea_id) select idea_id from idea where idea_id is not null;'
+      connection.query(logIdea_sql, (err, rows, field) => {
+        if (err) {
+          console.log(err)
+          res.send(false)
+        } else {
+          console.log(rows)
+          res.send(true)
+        }
+      })
     }
   })
 })
 
-// 아이디어 수정
+// 아이디어 수정 (수정중)
 app.patch('/idea/patchidea', (req, res) => {
   let email = req.session.member_email
   let key = req.body.key
@@ -655,7 +666,7 @@ app.patch('/idea/patchidea', (req, res) => {
 
 // 아이디어 게시물 조회
 app.get('/idea/listidea', (req, res) => {
-  let listIdea_sql = 'select idea_title, idea_date from idea'
+  let listIdea_sql = 'select idea_title, idea_date from idea where idea_delete = 0'
   connection.query(listIdea_sql, (err, rows, field) => {
     if (err) {
       console.log(err)

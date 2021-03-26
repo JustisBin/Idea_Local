@@ -6,14 +6,26 @@
 > 디렉터리 구조
 ```
 .
-├── bin                     
-├── docs                    
+├── bin   
+│   └── www                    
+├── docs   
+│   ├── api.md  
+│   ├── framework.md  
+│   ├── readme.md  
+│   └── resfulapi.md              
 ├── public                  
 │   ├── images                            
 │   ├── javascripts       
-│   └── stylesheets      
+│   └── stylesheets 
+│       └── stylesheets      
 ├── routes
-└── views
+│   ├── index.js                            
+│   ├── members.js       
+│   └── users.js 
+│── views
+│   ├── error.pug                           
+│   ├── index.pug       
+└── └── layout.pug 
 ```
 
 ### 2021.03.25 ###

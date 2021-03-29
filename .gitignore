@@ -1,8 +1,5 @@
 angular
 node_modules
-mail.js
-sql.js
 process.env
-test.js
 common
 members.js

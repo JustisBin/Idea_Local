@@ -17,7 +17,7 @@
 │   ├── images                            
 │   ├── javascripts       
 │   └── stylesheets 
-│       └── stylesheets      
+│       └── style.css      
 ├── routes
 │   ├── index.js                            
 │   ├── members.js       
@@ -25,7 +25,9 @@
 │── views
 │   ├── error.pug                           
 │   ├── index.pug       
-└── └── layout.pug 
+│   └── layout.pug
+│── app.js
+└── readme.md
 ```
 
 ### 2021.03.25 ###

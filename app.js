@@ -6,6 +6,9 @@ let logger = require('morgan')
 let dotenv = require('dotenv')
 let session = require('express-session')
 let MySQLStore = require('express-mysql-session')(session);
+let moment = require('moment')
+require('moment-timezone')
+moment.tz.setDefault('Aisa/Seoul')
 dotenv.config({
   path: './process.env'
 });

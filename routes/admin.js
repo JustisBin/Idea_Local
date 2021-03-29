@@ -2,7 +2,8 @@ let express = require('express');
 let router = express.Router();
 let getConnection = require('../common/db.js')
 let mailer = require('../common/mailer.js');
-let etc = require('../common/etc.js')
+let etc = require('../common/etc.js');
+const session = require('express-session');
 
 // 관리자 등록 
 router.post('/signup', (req, res) => {
@@ -68,6 +69,97 @@ router.post('/signin', (req, res) => {
   })
 })
 
+// 관리자 탈퇴
+router.patch('/deleteadmin', (req, res) => {
+  let email = req.session.email
+  let deleteAdmin_sql = 'update admin set admin_secede = 1 where admin_email = ?'
+  getConnection((conn) => {
+    conn.query(deleteAdmin_sql, email, (err, rows, fields) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        req.session.destroy((err) => {
+          console.log(err)
+        })
+        res.redirect('/')
+      }
+    })
+    conn.release()
+  })
+})
 
+// 회원정보, 로그검색
+// 회원 상세정보 보기
+router.get('/findmember', (req, res) => {
+  let findMem_sql = 'select * from member inner join member_log ml on member.member_email = ml.member_email where ml.member_email = ?'
+  getConnection((conn) => {
+    conn.query(findMem_sql, req.query.email, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        console.log(rows)
+        res.json(rows)
+      }
+    })
+    conn.release()
+  })
+})
+
+// 회원 로그 조회
+router.get('/logmember', (req, res) => {
+  let logfindMem_sql = 'select member_login from member_login_log where member_email = ?'
+  getConnection((conn) => {
+    conn.query(logfindMem_sql, req.query.email, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        console.log(rows)
+        res.json(rows)
+      }
+    })
+  })
+})
+
+// 회원정지
+router.patch('/deletemember', (req, res) => {
+  const now = new Date();
+  const email = req.session.admin_email
+  let deleteMem_sql = 'update member set member_ban = 1 where member_email = ?;' + 'insert into member_ban (member_email, member_ban_reason, member_ban_date, admin_email) values (?, ?, ?, ?) '
+  let deleteMem_params = [req.body.email, req.body.email, req.body.reason, now, email]
+  getConnection((conn) => {
+    conn.query(deleteMem_sql, deleteMem_params, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        console.log(rows)
+        res.send(true)
+      }
+    })
+    conn.release()
+  })
+})
+
+// 회원정지해제
+router.patch('/recmember', (req, res) => {
+  let recMem_sql = 'update member set member_secede = 0 where member_email = ?'
+  getConnection((conn) => {
+    conn.query(recMem_sql, req.query.email, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        console.log(rows)
+        res.send(true)
+      }
+    })
+    conn.release()
+  })
+})
+
+// 아이디어 포인트 부여
 
 module.exports = router;

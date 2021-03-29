@@ -151,7 +151,7 @@ router.post('/signin', (req, res) => {
         }
       }
     })
-    conn.realease()
+    conn.release()
   })
 })
 
@@ -193,7 +193,7 @@ router.patch('/mypage/resetmypage', (req, res) => {
           console.log('Success')
         }
       })
-      conn.realease()
+      conn.release()
     })
   } else {
     res.send('not eaquals pw')
@@ -231,7 +231,7 @@ router.post('/findpassword', (req, res) => {
         }
       }
     })
-    conn.realease()
+    conn.release()
   })
 })
 
@@ -264,7 +264,7 @@ router.get(/resetpassword/, (req, res) => {
         }
       }
     })
-    conn.realease()
+    conn.release()
   })
 })
 
@@ -294,7 +294,7 @@ router.patch('/repw', (req, res) => {
           })
         }
       })
-      conn.realease()
+      conn.release()
     })
   } else {
     res.send(false)
@@ -331,7 +331,7 @@ router.patch('/mypage/deletemember', (req, res) => {
         res.send(true)
       }
     })
-    conn.realease()
+    conn.release()
   })
 })
 
@@ -349,7 +349,7 @@ router.get('/mypage/usepointlist', (req, res) => {
         res.json(rows)
       }
     })
-    conn.realease()
+    conn.release()
   })
 })
 
@@ -367,7 +367,7 @@ router.get('/mypage/savepointlist', (req, res) => {
         res.json(rows)
       }
     })
-    conn.realease()
+    conn.release()
   })
 })
 
@@ -402,7 +402,7 @@ router.patch('/mypage/usepoint', (req, res) => {
         }
       }
     })
-    conn.realease()
+    conn.release()
   })
 })
 
@@ -425,7 +425,7 @@ router.get('/idea', (req, res) => {
         }
       }
     })
-    conn.realease()
+    conn.release()
   })
 })
 
@@ -445,7 +445,7 @@ router.patch('/check', (req, res) => {
       }
     })
   })
-  conn.realease()
+  conn.release()
 })
 
 //내 관심사업 조회
@@ -467,7 +467,7 @@ router.get('/marked', (req, res) => {
         }
       }
     })
-    conn.realease()
+    conn.release()
   })
 })
 
@@ -485,7 +485,7 @@ router.delete('/deletecheck', (req, res) => {
         res.send(true)
       }
     })
-    conn.realease()
+    conn.release()
   }))
 })
 

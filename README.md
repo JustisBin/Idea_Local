@@ -1,5 +1,12 @@
 ## 진행현황 ##
 -----
+### 2021.03 29 ###
+> node-express 구조 설계 및 이동 작업 완료
+> member관련 api작성 완료
+> admin 등록, 로그인, 탈퇴, 회원상세정보, 로그조회 완료
+> 전체 진행률 30% 이상
+
+
 ### 2021.03.26 ###
 > node-express 구조 설계 및 이동 작업
 > 전체 진행률 25% 이상 <br>
@@ -21,6 +28,7 @@
 ├── routes
 │   ├── index.js                            
 │   ├── members.js       
+│   ├── admin.js   
 │   └── users.js 
 │── views
 │   ├── error.pug                           

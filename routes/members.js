@@ -1,14 +1,8 @@
-var express = require('express');
-let mysql = require('mysql')
-var router = express.Router();
-let connection = mysql.createConnection({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PW,
-  database: process.env.DB_USE,
-  multipleStatements: true
-});
+let express = require('express');
+let router = express.Router();
+let getConnection = require('../common/db.js')
+let mailer = require('../common/mailer.js');
+let etc = require('../common/etc.js')
 
 /* 회원 관련 API */
 // 이용약관 확인
@@ -28,28 +22,19 @@ router.post('/member/agreemember', (req, res) => {
 // 이메일 인증
 // 이메일 중복확인 후, 이메일 인증 링크를 메일로 전송하여 회원가입 진행.
 router.post('/member/pass-email', (req, res) => {
-  const ranNum = (min, max) => {
-    return Math.floor(Math.random() * (max - min + 1)) + min
-  }
-  let num = String(ranNum(111111, 999999))
-  req.session.token = num
+  let num = String(etc.ranNum(111111, 999999));
   setTimeout(() => delete req.session.token, 300000)  // 이메일 키 유효기간 설정(5분)
+  req.session.token = num
 
-  let mailOptions = {
-    from: "dmlqls2822@naver.com",
-    to: req.body.mail,
+  let emailParam = {
+    toEmail: req.body.mail,
     subject: "[아이디어플랫폼]인증메일",
-    html: "<p>아래의 인증번호를 입력해주세요.</p>" + num  // 인증번호 전송
-  };
-  smtpTransport.sendMail(mailOptions, (err, info) => {
-    if (err) {
-      console.log(err);
-      res.send(false);
-    } else {
-      res.send(true)
-    }
-  });
-  smtpTransport.close();
+    html: "<p>아래의 인증번호를 입력해주세요.</p>" + num
+  }
+
+  mailer.sendMail(emailParam)
+
+  res.send(true)
 });
 
 // 이메일 인증번호 확인. 확인시 true 반환
@@ -59,6 +44,7 @@ router.get('/member/signup/checktoken', (req, res) => {
     res.send(true)
   }
   else {
+    console.log(req.session.token)
     res.send(false)
   }
 })
@@ -69,29 +55,31 @@ router.get('/member/signup/checktoken', (req, res) => {
 router.get('/member/check-email', (req, res) => {
   let param_email = req.query.member_email
   let sql = 'SELECT member_email, member_secede, member_ban FROM member WHERE member_email = "' + param_email + '";'
-  connection.query(sql, (err, rows, fields) => {
-    if (err) {
-      console.log(err)
-    } else {
-      if (rows.length != 0) {
-        let is_email = rows[0].member_email
-        if (is_email === param_email) {
-          console.log(is_email + ' == ' + param_email)
-          if (rows[0].member_secede === 1 || rows[0].member_ban === 1) {
-            res.send('error1')
+  getConnection((conn) => {
+    conn.query(sql, (err, rows, fields) => {
+      if (err) {
+        console.log(err)
+      } else {
+        if (rows.length != 0) {
+          let is_email = rows[0].member_email
+          if (is_email === param_email) {
+            console.log(is_email + ' == ' + param_email)
+            if (rows[0].member_secede === 1 || rows[0].member_ban === 1) {
+              res.send('error1')
+            } else {
+              res.send('error2')
+            }
           } else {
-            res.send('error2')
+            res.send('error3')
           }
         } else {
-          res.send('error3')
+          console.log(param_email + 'Not Found')
+          res.send(true)
         }
-      } else {
-        console.log(param_email + 'Not Found')
-        res.send(true)
       }
-    }
-
-  });
+    })
+    conn.release()
+  })
 })
 
 // 회원가입

@@ -95,9 +95,8 @@ router.post('/signup', (req, res) => {
       } else {
         delete req.session.chosen
         req.session.save()
-        const now = new Date();
         let log_sql = 'insert into member_log (member_email, member_log_join) values (?, ?);'   // 로그인 로그 저장
-        let log_params = [req.body.member_email, now]
+        let log_params = [req.body.member_email, etc.date()]
         conn.query(log_sql, log_params, (err, rows, fields) => {
           if (err) {
             console.log(err)
@@ -131,9 +130,8 @@ router.post('/signin', (req, res) => {
           if (rows[0].member_email === req.body.email && rows[0].member_pw === etc.pwCrypto(pw)) {
             req.session.member_email = req.body.email
             req.session.member_pw = etc.pwCrypto(pw)
-            const now = new Date();
             let log_sql = 'update member_log set member_login_lately = ? where member_email = ?;' + 'insert into member_login_log (member_email, member_login) values (? ,?);'
-            let log_params = [now, req.body.email, req.body.email, now]
+            let log_params = [etc.date(), req.body.email, req.body.email, etc.date()]
             conn.query(log_sql, log_params, (err, rows, fields) => {
               if (err) {
                 console.log(err)
@@ -238,7 +236,6 @@ router.post('/findpassword', (req, res) => {
 // 비밀번호재설정 링크
 // 이메일에서 LINK 클릭 시 token값을 비교하여 유효여부를 판단 후 반환
 router.get(/resetpassword/, (req, res) => {
-  const now = new Date();
   let variable = req.path.split("/")
   req.session.token = variable[3]   // 세션에 토큰 값 저장
   req.session.us_mail = variable[4]   // 세션에 이메일 저장
@@ -249,7 +246,7 @@ router.get(/resetpassword/, (req, res) => {
         console.log(err)
         res.send(false)
       } else {
-        if (rows[0].pw_dispose === 0 && rows[0].pw_date < now) {    // 유효한 링크
+        if (rows[0].pw_dispose === 0 && rows[0].pw_date < etc.date()) {    // 유효한 링크
           let date_sql = 'update pw_find set pw_dispose = 1 where pw_key = "' + req.session.token + '";'    // 해당 토큰의 폐기여부 업데이트
           conn.query(date_sql, (err, rows, field) => {
             if (err) {
@@ -373,7 +370,6 @@ router.get('/mypage/savepointlist', (req, res) => {
 
 // 포인트 사용
 router.patch('/mypage/usepoint', (req, res) => {
-  const now = new Date();
   let point = req.body.use_point
   let contents = req.body.use_contents
   let email = req.session.member_email
@@ -390,7 +386,7 @@ router.patch('/mypage/usepoint', (req, res) => {
           let use_member_point = rows[0].member_point - point
           let use_point = rows[0].use_point + point
           let use_point_sql = 'update member set member_point = ?, use_point = ? where member_email = ?;' + 'insert into point (member_email, use_date, use_contents, point) values (?, ?, ?, ?);'
-          let use_point_params = [use_member_point, use_point, email, email, now, contents, point]
+          let use_point_params = [use_member_point, use_point, email, email, etc.date(), contents, point]
           connection.query(use_point_sql, use_point_params, (err, rows, field) => {
             if (err) {
               console.log(err)

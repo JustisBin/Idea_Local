@@ -1,16 +1,13 @@
 let express = require('express');
 let router = express.Router();
 let getConnection = require('../common/db.js')
-let mailer = require('../common/mailer.js');
 let etc = require('../common/etc.js');
-const session = require('express-session');
 
 // 관리자 등록 
 router.post('/signup', (req, res) => {
   const pw = req.body.admin_pw
-  const now = new Date();
   let sql = 'insert into admin (admin_email, admin_name, admin_sex, admin_birth, admin_state, admin_pw, admin_phone) values (?, ?, ?, ?, ?, ?, ?);' + 'insert into admin_log (admin_email, admin_log_join) values (?, ?);'
-  let params = [req.body.admin_email, req.body.admin_name, req.body.admin_sex, req.body.admin_birth, req.body.admin_state, etc.pwCrypto(pw), req.body.admin_phone, req.body.admin_email, now]
+  let params = [req.body.admin_email, req.body.admin_name, req.body.admin_sex, req.body.admin_birth, req.body.admin_state, etc.pwCrypto(pw), req.body.admin_phone, req.body.admin_email, etc.date()]
   getConnection((conn) => {
     conn.query(sql, params, (err, rows, fields) => {
       if (err) {
@@ -43,11 +40,8 @@ router.post('/signin', (req, res) => {
           if (rows[0].admin_email === req.body.admin_email && rows[0].admin_pw === etc.pwCrypto(pw)) {
             req.session.admin_email = req.body.admin_email
             req.session.admin_pw = etc.pwCrypto(pw)
-            console.log(req.session.admin_email)
-            console.log('email : ', rows[0].admin_email, 'pw : ', rows[0].admin_pw)
-            const now = new Date();
             let log_sql = 'update admin_log set admin_login_lately = ? where admin_email = ?;'
-            let log_params = [now, req.body.admin_email]
+            let log_params = [etc.date(), req.body.admin_email]
             conn.query(log_sql, log_params, (err, rows, fields) => {
               if (err) {
                 console.log(err)
@@ -125,10 +119,9 @@ router.get('/logmember', (req, res) => {
 
 // 회원정지
 router.patch('/deletemember', (req, res) => {
-  const now = new Date();
   const email = req.session.admin_email
   let deleteMem_sql = 'update member set member_ban = 1 where member_email = ?;' + 'insert into member_ban (member_email, member_ban_reason, member_ban_date, admin_email) values (?, ?, ?, ?) '
-  let deleteMem_params = [req.body.email, req.body.email, req.body.reason, now, email]
+  let deleteMem_params = [req.body.email, req.body.email, req.body.reason, etc.date(), email]
   getConnection((conn) => {
     conn.query(deleteMem_sql, deleteMem_params, (err, rows, field) => {
       if (err) {
@@ -145,9 +138,9 @@ router.patch('/deletemember', (req, res) => {
 
 // 회원정지해제
 router.patch('/recmember', (req, res) => {
-  let recMem_sql = 'update member set member_secede = 0 where member_email = ?'
+  let recMem_sql = 'update member set member_ban = 0 where member_email = ?'
   getConnection((conn) => {
-    conn.query(recMem_sql, req.query.email, (err, rows, field) => {
+    conn.query(recMem_sql, req.body.email, (err, rows, field) => {
       if (err) {
         console.log(err)
         res.send(false)
@@ -160,6 +153,42 @@ router.patch('/recmember', (req, res) => {
   })
 })
 
-// 아이디어 포인트 부여
+// 아이디어 포인트 부여, 회수
+router.patch('/givepoint', (req, res) => {
+  const point = req.body.point
+  const id = req.body.id
+  let findIdea_sql = 'select idea.idea_id, idea.add_point, mem.member_email, mem.member_point, mem.save_point from member mem INNER JOIN idea ON mem.member_email = idea.member_email AND idea_id = ?'
+  getConnection((conn) => {
+    conn.query(findIdea_sql, id, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        addPoint = rows[0].add_point + point
+        memPoint = rows[0].member_point + point
+        savePoint = rows[0].save_point + point
+        let plusPoint_sql = 'update idea set admin_email = ?, add_point = ?, date_point = ? where idea_id = ?;' + 'update member set member_point = ?, save_point = ? where member_email = ?'
+        let plusPoint_params = [req.session.admin_email, addPoint, etc.date(), id, memPoint, savePoint, rows[0].member_email]
+        conn.query(plusPoint_sql, plusPoint_params, (err, rows, field) => {
+          if (err) {
+            console.log(err)
+            res.send(false)
+          } else {
+            console.log(rows)
+            res.send(true)
+          }
+        })
+      }
+    })
+    conn.release()
+  })
+})
+
+// 아이디어 게시물 삭제(수정중)
+router.patch('/deleteidea', (req, res) => {
+  const email = req.session.admin_email
+  const id = req.body.id
+  let deleteIdea_sql = 'update idea '
+})
 
 module.exports = router;

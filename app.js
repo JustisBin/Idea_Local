@@ -6,27 +6,24 @@ let logger = require('morgan')
 let dotenv = require('dotenv')
 let session = require('express-session')
 let MySQLStore = require('express-mysql-session')(session);
-let moment = require('moment')
-require('moment-timezone')
-moment.tz.setDefault('Aisa/Seoul')
 dotenv.config({
   path: './process.env'
 });
 
 let adminRouter = require('./routes/admin');
 let memberRouter = require('./routes/member');
+let ideaRouter = require('./routes/idea');
 
 // 세션 저장 연결
 let options = {
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   user: process.env.DB_USER,
-  password: process.env.DB_PW,		//데이터베이스 접근 비밀번호
-  database: process.env.DB_USE		//데이터베이스의 이름
+  password: process.env.DB_PW,
+  database: process.env.DB_USE
 };
 
 // 세션 사용 설정
-
 let sessionStore = new MySQLStore(options);
 let app = express();
 
@@ -48,6 +45,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/admin', adminRouter);
 app.use('/member', memberRouter);
+app.use('/idea', ideaRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

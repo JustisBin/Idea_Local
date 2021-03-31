@@ -138,9 +138,11 @@ router.patch('/deletemember', (req, res) => {
 
 // 회원정지해제
 router.patch('/recmember', (req, res) => {
-  let recMem_sql = 'update member set member_ban = 0 where member_email = ?'
+  const email = req.session.admin_email
+  let recMem_sql = 'update member set member_ban = 0 where member_email = ?' + + 'insert into member_ban (member_email, member_ban_reason, member_ban_date, admin_email) values (?, ?, ?, ?) '
+  let deleteMem_params = [req.body.email, req.body.email, req.body.reason, etc.date(), email]
   getConnection((conn) => {
-    conn.query(recMem_sql, req.body.email, (err, rows, field) => {
+    conn.query(recMem_sql, deleteMem_params, (err, rows, field) => {
       if (err) {
         console.log(err)
         res.send(false)

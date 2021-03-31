@@ -23,7 +23,7 @@ router.post('/newidea', (req, res) => {
   })
 })
 
-// 아이디어 수정(수정중)
+// 아이디어 수정
 router.patch('/patchidea', (req, res) => {
   let email = req.session.member_email
   let id = req.body.id
@@ -35,18 +35,22 @@ router.patch('/patchidea', (req, res) => {
         console.log(err)
         res.send(false)
       } else {
-        let oldContents = rows[0].idea_contents
-        let update_sql = 'update idea set idea_contents = ? where idea_id = ?;' + 'insert into idea_log(idea_id, idea_edit_date, idea_contents) values (?, ?, ?)'
-        let update_params = [req.body.contents, id, id, etc.date(), oldContents]
-        conn.query(update_sql, update_params, (err, rows, field) => {
-          if (err) {
-            console.log(err)
-            res.send(false)
-          } else {
-            console.log(rows)
-            res.send(true)
-          }
-        })
+        if (rows.length = 0) {
+          res.send(false)
+        } else {
+          let oldContents = rows[0].idea_contents
+          let update_sql = 'update idea set idea_contents = ? where idea_id = ?;' + 'insert into idea_log(idea_id, idea_edit_date, idea_contents) values (?, ?, ?)'
+          let update_params = [req.body.contents, id, id, etc.date(), oldContents]
+          conn.query(update_sql, update_params, (err, rows, field) => {
+            if (err) {
+              console.log(err)
+              res.send(false)
+            } else {
+              console.log(rows)
+              res.send(true)
+            }
+          })
+        }
       }
     })
     conn.release()
@@ -70,12 +74,31 @@ router.get('/listidea', (req, res) => {
   })
 })
 
-// 아이디어 게시물 검색 (수정 중)
-router.get('/searchidea', (req, res) => {
-  const id = req.query.title
-  let listIdea_sql = 'select idea_title, idea_date from idea where idea_delete = 0 AND idea_id = ?'
+// // 아이디어 게시물 검색 (수정 중)
+// router.get('/searchidea', (req, res) => {
+//   const id = req.query.title
+//   let listIdea_sql = 'select idea_title, idea_date from idea where idea_delete = 0 AND idea_id = ?'
+//   getConnection((conn) => {
+//     conn.query(listIdea_sql, id, (err, rows, field) => {
+//       if (err) {
+//         console.log(err)
+//         res.send(false)
+//       } else {
+//         console.log(rows)
+//         res.json(rows)
+//       }
+//     })
+//     conn.release()
+//   })
+// })
+
+// 아이디어 게시물 보기 열기
+router.get('/openidea', (req, res) => {
+  const id = req.query.id
+  let open_sql = 'select idea_title, idea_contents, idea_date from idea where member_email = ? AND idea_id = ?'
+  let open_params = [req.session.member_email, id]
   getConnection((conn) => {
-    conn.query(listIdea_sql, id, (err, rows, field) => {
+    conn.query(open_sql, open_params, (err, rows, field) => {
       if (err) {
         console.log(err)
         res.send(false)
@@ -84,14 +107,7 @@ router.get('/searchidea', (req, res) => {
         res.json(rows)
       }
     })
-    conn.release()
   })
-})
-
-// 아이디어 게시물 보기 열기
-router.get('/openidea', (req, res) => {
-  const id = req.query.id
-
 })
 
 

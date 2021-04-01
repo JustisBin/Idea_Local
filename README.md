@@ -1,7 +1,12 @@
 ## 진행현황 ##
 -----
+### 2021.04.01 ###
+> idea 수정 완료 <br>
+> idea 게시물 조회, 상세조회, 검색
+> member, admin api완료. 전체진행률 38% 이상
+
 ### 2021.03.30 ###
-> admin 관련 api 작성 중    <br>
+> admin 관련 api 작성 중 <br>
 > idea 관련 api 작성 중 <br>
 > 게시물 삭제 -> admin만 가능하도록 구현 수정 중 <br>
 > idea 수정 시 member_email error처리 구현 중 <br>

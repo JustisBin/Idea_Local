@@ -27,21 +27,18 @@ router.post('/newidea', (req, res) => {
 router.patch('/patchidea', (req, res) => {
   let email = req.session.member_email
   let id = req.body.id
-  let patch_sql = 'select idea_contents from idea where member_email = ? AND idea_id = ?'
-  let patch_params = [email, id]
+  let a_sql = 'select member_email from idea where idea_id = ' + id
+  let patch_sql = 'insert into idea_log(idea_id, idea_edit_date, idea_contents) values(?, ?, (select idea_contents from idea where idea_id = ?));' + 'update idea set idea_contents = ? where  idea_id = ?;'
+  let patch_params = [id, etc.date(), id, req.body.contents, id]
   getConnection((conn) => {
-    conn.query(patch_sql, patch_params, (err, rows, field) => {
+    conn.query(a_sql, (err, rows, field) => {
       if (err) {
         console.log(err)
         res.send(false)
       } else {
-        if (rows.length = 0) {
-          res.send(false)
-        } else {
-          let oldContents = rows[0].idea_contents
-          let update_sql = 'update idea set idea_contents = ? where idea_id = ?;' + 'insert into idea_log(idea_id, idea_edit_date, idea_contents) values (?, ?, ?)'
-          let update_params = [req.body.contents, id, id, etc.date(), oldContents]
-          conn.query(update_sql, update_params, (err, rows, field) => {
+        console.log(rows)
+        if (rows[0].member_email === email) {
+          conn.query(patch_sql, patch_params, (err, rows, field) => {
             if (err) {
               console.log(err)
               res.send(false)
@@ -50,18 +47,42 @@ router.patch('/patchidea', (req, res) => {
               res.send(true)
             }
           })
+        } else {
+          res.send(false)
         }
       }
+      conn.release()
     })
-    conn.release()
   })
 })
 
-// 아이디어 게시물 조회
+// 아이디어 게시물 조회 (*처리 수정중)
 router.get('/listidea', (req, res) => {
-  let listIdea_sql = 'select idea_title, idea_date from idea where idea_delete = 0'
+  let change_sql = 'select rpad('
   getConnection((conn) => {
-    conn.query(listIdea_sql, (err, rows, field) => {
+
+  })
+  // let listIdea_sql = 'select idea_id, idea_title, idea_date from idea where idea_delete = 0'
+  // getConnection((conn) => {
+  //   conn.query(listIdea_sql, (err, rows, field) => {
+  //     if (err) {
+  //       console.log(err)
+  //       res.send(false)
+  //     } else {
+  //       console.log(rows)
+  //       res.json(rows)
+  //     }
+  //   })
+  //   conn.release()
+  // })
+})
+
+// 아이디어 게시물 검색(full-text로 대체작업중)
+router.get('/searchidea', (req, res) => {
+  const title = req.query.idea_title
+  let listIdea_sql = 'select idea from idea where match(idea_title) against(?);'
+  getConnection((conn) => {
+    conn.query(listIdea_sql, title, (err, rows, field) => {
       if (err) {
         console.log(err)
         res.send(false)
@@ -74,27 +95,9 @@ router.get('/listidea', (req, res) => {
   })
 })
 
-// // 아이디어 게시물 검색 (수정 중)
-// router.get('/searchidea', (req, res) => {
-//   const id = req.query.title
-//   let listIdea_sql = 'select idea_title, idea_date from idea where idea_delete = 0 AND idea_id = ?'
-//   getConnection((conn) => {
-//     conn.query(listIdea_sql, id, (err, rows, field) => {
-//       if (err) {
-//         console.log(err)
-//         res.send(false)
-//       } else {
-//         console.log(rows)
-//         res.json(rows)
-//       }
-//     })
-//     conn.release()
-//   })
-// })
-
-// 아이디어 게시물 보기 열기
-router.get('/openidea', (req, res) => {
-  const id = req.query.id
+// 아이디어 게시물 상세조회
+router.get('/openidea/:idea_id', (req, res) => {
+  const id = req.params.idea_id
   let open_sql = 'select idea_title, idea_contents, idea_date from idea where member_email = ? AND idea_id = ?'
   let open_params = [req.session.member_email, id]
   getConnection((conn) => {
@@ -103,8 +106,12 @@ router.get('/openidea', (req, res) => {
         console.log(err)
         res.send(false)
       } else {
-        console.log(rows)
-        res.json(rows)
+        if (rows.length === 0) {
+          res.send(false)
+        } else {
+          console.log(rows)
+          res.json(rows)
+        }
       }
     })
   })

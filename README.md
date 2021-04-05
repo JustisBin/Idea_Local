@@ -2,12 +2,19 @@
 ```
 {
     member : 24/24
-    admin : 8/9
-    idea : 4/6(?)
-    board : 0/?
+    admin : 12/12
+    idea&cs : 5/10
+    anno_notice : 0/10
+    contact : 0/5
 }
 ```
 -----
+### 2021.04.05 ###
+> idea 게시판, admin 완료 <br>
+> member rank 구현 완료 및 axios, cheerio를 이용한 크롤링 테스트중 <br>
+> 게시판 페이징 구현, 첨부파일 관련 구현 테스트중 <br>
+> 전체 진행률 55% 이상
+
 ### 2021.04.01 ###
 > idea 수정 완료 <br>
 > idea 게시물 조회, 상세조회, 검색

@@ -2,6 +2,8 @@ let express = require('express');
 let router = express.Router();
 let getConnection = require('../common/db.js')
 let etc = require('../common/etc.js');
+let multer = require('multer')
+let upload = multer({ dest: 'public/images' })
 
 // 관리자 등록 
 router.post('/signup', (req, res) => {
@@ -186,11 +188,73 @@ router.patch('/givepoint', (req, res) => {
   })
 })
 
-// 아이디어 게시물 삭제(수정중)
-router.patch('/deleteidea', (req, res) => {
-  const email = req.session.admin_email
-  const id = req.body.id
-  let deleteIdea_sql = 'update idea '
+//포인트 순위 갱신
+router.patch('/pointrank', (req, res) => {
+  let rank_sql = 'update member t1, (select @ROWNUM := @ROWNUM + 1 rownum, member_email from member, (select @ROWNUM := 0) rn where member_ban = 0 AND member_secede = 0 order by save_point desc) t2 set t1.member_rank = t2.rownum where t1.member_email = t2.member_email'
+  getConnection((conn) => {
+    conn.query(rank_sql, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        console.log(rows)
+        res.send(true)
+      }
+    })
+  })
+})
+
+// 아이디어 게시물 조회
+router.get('/idea/:idea_id', (req, res) => {
+  const id = req.params.idea_id
+  let open_sql = 'select idea_title, idea_contents, idea_date from idea where idea_id = ?'
+  getConnection((conn) => {
+    conn.query(open_sql, id, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        if (rows.length === 0) {
+          res.send(false)
+        } else {
+          console.log(rows)
+          res.json(rows)
+        }
+      }
+    })
+  })
+})
+
+// 아이디어 로그 조회
+router.get('/idea/log/:idea_id', (req, res) => {
+  const id = req.params.idea_id
+  let openlog_sql = 'select idea_id, idea_edit_date, idea_contents from idea_log where idea_id = ?'
+  getConnection((conn) => {
+    conn.query(openlog_sql, id, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        res.send(true)
+      }
+    })
+  })
+})
+
+// 아이디어 게시물 삭제
+router.patch('/deleteidea/:idea_id', (req, res) => {
+  const id = req.params.idea_id
+  let delete_sql = 'update idea set idea_delete = 1 from where idea_id = ?'
+  getConnection((conn) => {
+    conn.query(delete_sql, id, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        res.send(true)
+      }
+    })
+  })
 })
 
 module.exports = router;

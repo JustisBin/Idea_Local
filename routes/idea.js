@@ -1,7 +1,6 @@
 let express = require('express');
 let router = express.Router();
 let getConnection = require('../common/db.js')
-let mailer = require('../common/mailer.js');
 let etc = require('../common/etc.js')
 
 // 아이디어 등록
@@ -28,7 +27,7 @@ router.patch('/patchidea', (req, res) => {
   let email = req.session.member_email
   let id = req.body.id
   let a_sql = 'select member_email from idea where idea_id = ' + id
-  let patch_sql = 'insert into idea_log(idea_id, idea_edit_date, idea_contents) values(?, ?, (select idea_contents from idea where idea_id = ?));' + 'update idea set idea_contents = ? where  idea_id = ?;'
+  let patch_sql = 'insert into idea_log(idea_id, idea_edit_date, idea_contents) values(?, ?, (select idea_contents from idea where idea_id = ?));' + 'update idea set idea_contents = ? where idea_id = ?;'
   let patch_params = [id, etc.date(), id, req.body.contents, id]
   getConnection((conn) => {
     conn.query(a_sql, (err, rows, field) => {
@@ -56,31 +55,27 @@ router.patch('/patchidea', (req, res) => {
   })
 })
 
-// 아이디어 게시물 조회 (*처리 수정중)
+// 아이디어 게시물 조회
 router.get('/listidea', (req, res) => {
-  let change_sql = 'select rpad('
+  let listIdea_sql = 'select idea_id, idea_title, idea_date from idea where idea_delete = 0'
   getConnection((conn) => {
-
+    conn.query(listIdea_sql, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        console.log(rows)
+        res.json(rows)
+      }
+    })
+    conn.release()
   })
-  // let listIdea_sql = 'select idea_id, idea_title, idea_date from idea where idea_delete = 0'
-  // getConnection((conn) => {
-  //   conn.query(listIdea_sql, (err, rows, field) => {
-  //     if (err) {
-  //       console.log(err)
-  //       res.send(false)
-  //     } else {
-  //       console.log(rows)
-  //       res.json(rows)
-  //     }
-  //   })
-  //   conn.release()
-  // })
 })
 
-// 아이디어 게시물 검색(full-text로 대체작업중)
+// 아이디어 게시물 검색
 router.get('/searchidea', (req, res) => {
   const title = req.query.idea_title
-  let listIdea_sql = 'select idea from idea where match(idea_title) against(?);'
+  let listIdea_sql = 'select idea_id, idea_title, idea_date from idea where match(idea_title) against(?);'
   getConnection((conn) => {
     conn.query(listIdea_sql, title, (err, rows, field) => {
       if (err) {

@@ -13,7 +13,7 @@ dotenv.config({
 let adminRouter = require('./routes/admin');
 let memberRouter = require('./routes/member');
 let ideaRouter = require('./routes/idea');
-let testRouter = require('./routes/test');
+//let testRouter = require('./routes/test');
 
 // 세션 저장 연결
 let options = {
@@ -47,7 +47,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/admin', adminRouter);
 app.use('/member', memberRouter);
 app.use('/idea', ideaRouter);
-app.use('/test', testRouter);
+//app.use('/test', testRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

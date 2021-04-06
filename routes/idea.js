@@ -75,9 +75,9 @@ router.get('/listidea', (req, res) => {
 // 아이디어 게시물 검색
 router.get('/searchidea', (req, res) => {
   const title = req.query.idea_title
-  let listIdea_sql = 'select idea_id, idea_title, idea_date from idea where match(idea_title) against(?);'
+  let listIdea_sql = 'select idea_id, idea_title, idea_date from idea where match(idea_title) against("' + title + '") AND idea_delete = 0;'
   getConnection((conn) => {
-    conn.query(listIdea_sql, title, (err, rows, field) => {
+    conn.query(listIdea_sql, (err, rows, field) => {
       if (err) {
         console.log(err)
         res.send(false)
@@ -111,6 +111,7 @@ router.get('/openidea/:idea_id', (req, res) => {
     })
   })
 })
+
 
 
 module.exports = router;

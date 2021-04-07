@@ -2,13 +2,18 @@
 ```
 {
     member : 24/24
-    admin : 12/12
+    admin : 12/13
     idea&cs : 5/10
     anno_notice : 0/10
     contact : 0/5
 }
 ```
 -----
+### 2021.04.07 ###
+> 크롤링 테스트 중..... 크롤링 모듈화 완성 <br>
+> ecu-kr -> utf-8 로 변환 과정 중 지속적으로 한글이 깨지는 현상 발생
+> 전체 진행률 57% 이상
+
 ### 2021.04.05 ###
 > idea 게시판, admin 완료 <br>
 > member rank 구현 완료 및 axios, cheerio를 이용한 크롤링 테스트중 <br>

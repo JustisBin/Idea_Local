@@ -2,8 +2,7 @@ let express = require('express');
 let router = express.Router();
 let getConnection = require('../common/db.js')
 let etc = require('../common/etc.js');
-let multer = require('multer')
-let upload = multer({ dest: 'public/images' })
+let axi = require('../common/patch.js');
 
 // 관리자 등록 
 router.post('/signup', (req, res) => {
@@ -254,6 +253,17 @@ router.patch('/deleteidea/:idea_id', (req, res) => {
         res.send(true)
       }
     })
+  })
+})
+
+// 공고사항 크롤링(utf-8 수정중)
+router.get('/insertanno', (req, res) => {
+  axi.getList().then(data => {
+    console.log(data)
+    res.send(data)
+  }).catch((err) => {
+    console.log(err)
+    res.send(false)
   })
 })
 

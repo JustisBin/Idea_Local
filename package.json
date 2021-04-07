@@ -17,6 +17,8 @@
     "http-errors": "~1.6.3",
     "https": "^1.0.0",
     "iconv": "^3.0.0",
+    "iconv-lite": "^0.4.23",
+    "jschardet": "^2.3.0",
     "moment": "^2.29.1",
     "moment-timezone": "^0.5.33",
     "morgan": "~1.9.1",

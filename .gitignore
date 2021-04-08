@@ -1,7 +1,8 @@
 angular
 node_modules
 process.env
-common
 members.js
 test.js
 aa.js
+db_config.json
+mailer_info.json

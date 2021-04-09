@@ -2,7 +2,9 @@ let express = require('express');
 let router = express.Router();
 let getConnection = require('../common/db.js')
 let etc = require('../common/etc.js')
+let upload = require('../common/file.js')
 
+/**아이디어 게시판 */
 // 아이디어 등록
 router.post('/idea/newidea', (req, res) => {
   let email = req.session.member_email
@@ -56,15 +58,25 @@ router.patch('/idea/patchidea', (req, res) => {
 })
 
 // 아이디어 게시물 조회
-router.get('/idea/listidea', (req, res) => {
-  let listIdea_sql = 'select idea_id, idea_title, idea_date from idea where idea_delete = 0'
+router.get('/idea/listidea', async (req, res) => {
+  let start_page = req.query.page
+  let page_size = req.query.pageSize
+  let last_page = Math.ceil(await etc.ideaCnt() / page_size)
+  console.log(last_page)
+  if (start_page <= 0) {
+    start_page = 1
+  } else if (start_page > last_page) {
+    start_page = (last_page - 1) * page_size
+  } else {
+    start_page = (start_page - 1) * page_size;
+  }
+  let listIdea_sql = 'select idea_id, idea_title, idea_date from idea where idea_delete = 0 LIMIT ' + start_page + ', ' + page_size
   getConnection((conn) => {
     conn.query(listIdea_sql, (err, rows, field) => {
       if (err) {
         console.log(err)
         res.send(false)
       } else {
-        console.log(rows)
         res.json(rows)
       }
     })
@@ -75,7 +87,7 @@ router.get('/idea/listidea', (req, res) => {
 // 아이디어 게시물 검색
 router.get('/idea/searchidea', (req, res) => {
   let title = req.query.idea_title
-  let listIdea_sql = 'select idea_id, idea_title, idea_date from idea where match(idea_title) against("' + title + '") AND idea_delete = 0;'
+  let listIdea_sql = 'select idea_id, idea_title, idea_date from idea where match(idea_title) against("' + title + '*" IN BOOLEAN MODE) AND idea_delete = 0;'
   getConnection((conn) => {
     conn.query(listIdea_sql, (err, rows, field) => {
       if (err) {
@@ -113,9 +125,32 @@ router.get('/idea/openidea/:idea_id', (req, res) => {
   })
 })
 
+// 아이디어 파일 업로드(수정중)
+router.post('/idea/upload', upload.single('fileupload'), (req, res) => {
+  console.log(req.file)
+  console.log(req.file.path)
+  console.log(upload)
+  console.log(upload.storage.getFilename)
+  res.send(true)
+  // getConnection((conn) => {
+  //   let upload_sql = 'insert into '
+  // })
+})
+
+/**공고 게시판 */
 // 공고사항 조회
 router.get('/anno/listanno', async (req, res) => {
-  let listAnno_sql = 'select anno_id, anno_title, anno_date from anno'
+  let start_page = req.query.page
+  let page_size = req.query.pageSize
+  let last_page = Math.ceil(await etc.annoCnt() / page_size)
+  if (start_page <= 0) {
+    start_page = 1
+  } else if (start_page > last_page) {
+    start_page = (last_page - 1) * page_size
+  } else {
+    start_page = (start_page - 1) * page_size;
+  }
+  let listAnno_sql = 'select anno_id, anno_title, anno_date from anno LIMIT ' + start_page + ', ' + page_size
   getConnection((conn) => {
     conn.query(listAnno_sql, (err, rows, field) => {
       if (err) {
@@ -132,7 +167,7 @@ router.get('/anno/listanno', async (req, res) => {
 // 공고사항 게시물 검색
 router.get('/anno/searchanno', (req, res) => {
   let title = req.query.title
-  let listAnno_sql = 'select anno_id, anno_title, anno_date from anno where match(anno_title) against("' + title + '");'
+  let listAnno_sql = 'select anno_id, anno_title, anno_date from anno where match(anno_title) against("' + title + '*" IN BOOLEAN MODE);'
   getConnection((conn) => {
     conn.query(listAnno_sql, (err, rows, field) => {
       if (err) {
@@ -166,5 +201,26 @@ router.get('/anno/openanno/:anno_id', (req, res) => {
     conn.release()
   })
 })
+
+/**공지사항 게시판 */
+// 공지사항 게시물 등록
+
+// 공지사항 게시물 조회
+
+// 공지사항 게시물 검색
+
+// 공지사항 게시물 상세조회
+
+/**문의 게시판 */
+// 문의게시글 등록
+
+// 문의게시물 수정
+
+// 문의게시물 검색
+
+// 문의게시물 상세조회
+
+/**고객센터 */
+// 고객센터 이메일 작성
 
 module.exports = router;

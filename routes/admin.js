@@ -83,7 +83,101 @@ router.patch('/deleteadmin', (req, res) => {
   })
 })
 
-// 회원정보, 로그검색
+// 관리자 목록조회
+router.get('/adminlist', (req, res) => {
+  let getAdmin_sql = 'select admin_email, admin_name from admin'
+  getConnection((conn) => {
+    conn.query(getAdmin_sql, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        res.json(rows)
+      }
+    })
+  })
+})
+
+// 관리자 검색
+router.get('/searchadmin', (req, res) => {
+  let email = req.query.email
+  let searchAdmin_sql = 'select admin_email, admin_name from admin where match(admin_email) against("' + email + '*" IN BOOLEAN MODE);'
+  getConnection((conn) => {
+    conn.query(searchAdmin_sql, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        res.json(rows)
+      }
+    })
+    conn.release()
+  })
+})
+
+// 관리자 상세정보 조회
+router.get('/findadmin', (req, res) => {
+  let findAdmin_sql = 'select * from admin inner join admin_log ml on admin.admin_email = ml.admin_email where ml.admin_email = ?'
+  getConnection((conn) => {
+    conn.query(findAdmin_sql, req.query.email, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        res.json(rows)
+      }
+    })
+    conn.release()
+  })
+})
+
+// 관리자 로그 조회
+router.get('/logadmin', (req, res) => {
+  let logfindMem_sql = 'select * from admin_log where admin_email = ?'
+  getConnection((conn) => {
+    conn.query(logfindMem_sql, req.query.email, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        res.json(rows)
+      }
+    })
+  })
+})
+
+// 회원 목록조회
+router.get('/memberlist', (req, res) => {
+  let getMem_sql = 'select member_email, member_name from member'
+  getConnection((conn) => {
+    conn.query(getMem_sql, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        res.json(rows)
+      }
+    })
+  })
+})
+
+// 회원 검색
+router.get('/searchmember', (req, res) => {
+  let email = req.query.email
+  let searchMem_sql = 'select member_email, member_name from member where match(member_email) against("' + email + '*" IN BOOLEAN MODE);'
+  getConnection((conn) => {
+    conn.query(searchMem_sql, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        res.json(rows)
+      }
+    })
+    conn.release()
+  })
+})
+
 // 회원 상세정보 보기
 router.get('/findmember', (req, res) => {
   let findMem_sql = 'select * from member inner join member_log ml on member.member_email = ml.member_email where ml.member_email = ?'
@@ -93,7 +187,6 @@ router.get('/findmember', (req, res) => {
         console.log(err)
         res.send(false)
       } else {
-        console.log(rows)
         res.json(rows)
       }
     })
@@ -103,14 +196,13 @@ router.get('/findmember', (req, res) => {
 
 // 회원 로그 조회
 router.get('/logmember', (req, res) => {
-  let logfindMem_sql = 'select member_login from member_login_log where member_email = ?'
+  let logfindMem_sql = 'select * from member_login_log where member_email = ?'
   getConnection((conn) => {
     conn.query(logfindMem_sql, req.query.email, (err, rows, field) => {
       if (err) {
         console.log(err)
         res.send(false)
       } else {
-        console.log(rows)
         res.json(rows)
       }
     })
@@ -186,39 +278,17 @@ router.patch('/givepoint', (req, res) => {
   })
 })
 
-//포인트 순위 갱신
-router.patch('/pointrank', (req, res) => {
-  let rank_sql = 'update member t1, (select @ROWNUM := @ROWNUM + 1 rownum, member_email from member, (select @ROWNUM := 0) rn where member_ban = 0 AND member_secede = 0 order by save_point desc) t2 set t1.member_rank = t2.rownum where t1.member_email = t2.member_email'
-  getConnection((conn) => {
-    conn.query(rank_sql, (err, rows, field) => {
-      if (err) {
-        console.log(err)
-        res.send(false)
-      } else {
-        console.log(rows)
-        res.send(true)
-      }
-    })
-    conn.release()
-  })
-})
-
-// 아이디어 게시물 조회
-router.get('/idea/:idea_id', (req, res) => {
+// 아이디어게시물 삭제
+router.patch('/deleteidea/:idea_id', (req, res) => {
   const id = req.params.idea_id
-  let open_sql = 'select idea_title, idea_contents, idea_date from idea where idea_id = ?'
+  let delete_sql = 'update idea set idea_delete = 1 from where idea_id = ?'
   getConnection((conn) => {
-    conn.query(open_sql, id, (err, rows, field) => {
+    conn.query(delete_sql, id, (err, rows, field) => {
       if (err) {
         console.log(err)
         res.send(false)
       } else {
-        if (rows.length === 0) {
-          res.send(false)
-        } else {
-          console.log(rows)
-          res.json(rows)
-        }
+        res.send(true)
       }
     })
     conn.release()
@@ -242,21 +312,17 @@ router.get('/idea/log/:idea_id', (req, res) => {
   })
 })
 
-// 아이디어 게시물 삭제
-router.patch('/deleteidea/:idea_id', (req, res) => {
-  const id = req.params.idea_id
-  let delete_sql = 'update idea set idea_delete = 1 from where idea_id = ?'
-  getConnection((conn) => {
-    conn.query(delete_sql, id, (err, rows, field) => {
-      if (err) {
-        console.log(err)
-        res.send(false)
-      } else {
-        res.send(true)
-      }
-    })
-    conn.release()
-  })
-})
+// 공지사항 게시물 삭제
+
+// 공지사항 게시물 로그 조회
+
+// 문의게시물 삭제
+
+// 문의게시물 로그 조회
+
+// 고객센터 로그 조회
+
+// 고객센터 답변하기
+
 
 module.exports = router;

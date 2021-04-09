@@ -48,7 +48,7 @@ function getContents(url) {
     })
 }
 
-cron.schedule('0 0 7 1-31 * *', async () => {
+cron.schedule('0 */1 * * * *', async () => {
   let valText = ""
   let selText = ""
   await getList().then(data => {
@@ -96,7 +96,6 @@ cron.schedule('0 0 7 1-31 * *', async () => {
           console.log('not contents update')
         } else {
           for (let i = 0; i < rows.length; i++) {
-            console.log(rows[i].anno_link)
             getContents(rows[i].anno_link).then(data => {
               let updContents_sql = "update anno set anno_contents = " + conn.escape(data.contents) + " where anno_link = " + conn.escape(rows[i].anno_link)
               conn.query(updContents_sql, (err, rows, field) => {
@@ -112,6 +111,18 @@ cron.schedule('0 0 7 1-31 * *', async () => {
           }
           console.log('not contents update')
         }
+      }
+    })
+    conn.release()
+  })
+
+  await getConnection((conn) => {
+    let rank_sql = 'update member t1, (select @ROWNUM := @ROWNUM + 1 rownum, member_email from member, (select @ROWNUM := 0) rn where member_ban = 0 AND member_secede = 0 order by save_point desc) t2 set t1.member_rank = t2.rownum where t1.member_email = t2.member_email'
+    conn.query(rank_sql, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+      } else {
+        console.log('rank update')
       }
     })
     conn.release()

@@ -19,8 +19,7 @@ const etc = {
 
   /* 현재 시간 반환기 */
   date: () => {
-    let date = moment().format('YYYY-MM-DD HH:mm:ss')
-    return date
+    return date = moment().format('YYYY-MM-DD HH:mm:ss')
   },
 
   /* 공고사항 게시물 count 반환기 */
@@ -63,7 +62,79 @@ const etc = {
       })
     })
     return count;
+  },
+
+  /* 공지사항 게시물 count 변환기 */
+  noticeCnt: async () => {
+    let count;
+    let cnt_sql = 'select count(*) as count from notice where notice_delete = 0'
+    await new Promise((resolve, rejects) => {
+      getConnection((conn) => {
+        conn.query(cnt_sql, (err, rows, field) => {
+          if (err) {
+            console.log(err)
+            rejects(err)
+          } else {
+            count = rows[0].count
+            resolve(count)
+          }
+        })
+        conn.release()
+      })
+    })
+    return count;
+  },
+
+  /* 문의 게시물 count 변환기 */
+  csCnt: async () => {
+    let count;
+    let cnt_sql = 'select count(*) as count from cs where cs_delete = 0'
+    await new Promise((resolve, rejects) => {
+      getConnection((conn) => {
+        conn.query(cnt_sql, (err, rows, field) => {
+          if (err) {
+            console.log(err)
+            rejects(err)
+          } else {
+            count = rows[0].count
+            resolve(count)
+          }
+        })
+        conn.release()
+      })
+    })
+    return count;
+  },
+
+  /* 고객센터 Count 변환기 */
+  contCnt: async () => {
+    let count;
+    let cnt_sql = 'select count(*) as count from contact'
+    await new Promise((resolve, rejects) => {
+      getConnection((conn) => {
+        conn.query(cnt_sql, (err, rows, field) => {
+          if (err) {
+            console.log(err)
+            rejects(err)
+          } else {
+            count = rows[0].count
+            resolve(count)
+          }
+        })
+        conn.release()
+      })
+    })
+    return count;
+  },
+
+  isEmpty: (value) => {
+    if (value == "" || value == null || value == undefined || (value != null && typeof value == "object" && !Object.keys(value).length)) {
+      return true
+    } else {
+      return false
+    }
   }
+
 }
 
 module.exports = etc;

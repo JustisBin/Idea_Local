@@ -1,6 +1,6 @@
 let axios = require('axios')
 let cheerio = require('cheerio')
-let iconv2 = require('iconv-lite')
+let iconv = require('iconv-lite')
 let getConnection = require('./db.js')
 let cron = require('node-cron')
 let etc = require('../common/etc.js')
@@ -17,7 +17,7 @@ function getList() {
   return getHtml("https://cse.kangwon.ac.kr/index.php?mp=5_1_1")
     .then(html => {
       let ulList = [];
-      const $ = cheerio.load(iconv2.decode(html.data, 'euc-kr'))
+      const $ = cheerio.load(iconv.decode(html.data, 'euc-kr'))
       const $bodyList = $("#bbsWrap > table > tbody > tr")
       $bodyList.each((i, elem) => {
         let url = "https://cse.kangwon.ac.kr/" + $(elem).find('a').attr('href')
@@ -39,7 +39,7 @@ function getList() {
 function getContents(url) {
   return getHtml(url)
     .then(html => {
-      const $con = cheerio.load(iconv2.decode(html.data, 'euc-kr'))
+      const $con = cheerio.load(iconv.decode(html.data, 'euc-kr'))
       const urlCon = {
         contents: $con("#oxbbsPrintArea > div > div.note").html()
       }

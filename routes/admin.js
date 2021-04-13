@@ -3,7 +3,6 @@ let router = express.Router();
 let getConnection = require('../common/db.js')
 let etc = require('../common/etc.js');
 let mailer = require('../common/mailer');
-const { get } = require('./board.js');
 
 // 관리자 등록 
 router.post('/signup', (req, res) => {

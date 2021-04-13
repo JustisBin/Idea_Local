@@ -3,6 +3,9 @@ let router = express.Router();
 let getConnection = require('../common/db.js')
 let etc = require('../common/etc.js')
 let upload = require('../common/file.js')
+let fs = require('fs');
+let path = require('path')
+let mime = require('mime')
 
 /**아이디어 게시판 */
 // 아이디어 등록
@@ -152,8 +155,8 @@ router.get('/idea/searchidea', (req, res) => {
 
 // 아이디어 게시물 상세조회
 router.get('/idea/openidea/:idea_id', (req, res) => {
-  let id = req.params.cs_id
-  let open_sql = 'select idea_title, idea_contents, idea_date, member_email from idea where idea_id = ?'
+  let id = req.params.idea_id
+  let open_sql = 'select idea.idea_title, idea.idea_contents, idea.idea_date, idea.member_email, ifd.idea_file_path, ifd.idea_file_name from idea left join idea_file_dir as ifd on idea.idea_id = ifd.idea_id where idea.idea_id = ?'
   getConnection((conn) => {
     conn.query(open_sql, id, (err, rows, field) => {
       if (err) {
@@ -164,7 +167,6 @@ router.get('/idea/openidea/:idea_id', (req, res) => {
           res.send(false)
         } else {
           if (rows[0].member_email === req.session.member_email || etc.isEmpty(req.session.admin_email) === false) {
-            console.log(rows)
             res.json(rows)
           } else {
             res.json({
@@ -172,7 +174,6 @@ router.get('/idea/openidea/:idea_id', (req, res) => {
               reason: 'not open'
             })
           }
-
         }
       }
     })
@@ -394,7 +395,7 @@ router.get('/notice/searchnotice', (req, res) => {
 // 공지사항 게시물 상세조회
 router.get('/notice/opennotice/:notice_id', (req, res) => {
   let id = req.params.notice_id
-  let open_sql = 'select notice_title, notice_contents, notice_date from notice where notice_id = ?'
+  let open_sql = 'select no.notice_title, no.notice_contents, no.notice_date, nfd.notice_file_name, nfd.notice_file_path from notice as no left join notice_file_dir as nfd on no.notice_id = nfd.notice_id where no.notice_id = ?'
   getConnection((conn) => {
     conn.query(open_sql, id, (err, rows, field) => {
       if (err) {
@@ -404,7 +405,6 @@ router.get('/notice/opennotice/:notice_id', (req, res) => {
         if (rows.length === 0) {
           res.send(false)
         } else {
-          console.log(rows)
           res.json(rows)
         }
       }
@@ -564,7 +564,7 @@ router.get('/cs/searchcs', (req, res) => {
 // 문의게시물 상세조회
 router.get('/cs/opencs/:cs_id', (req, res) => {
   let id = req.params.cs_id
-  let open_sql = 'select cs_title, cs_contents, cs_date, cs_secret, member_email from cs where cs_id = ?'
+  let open_sql = 'select cs.cs_title, cs.cs_contents, cs.cs_date, cfd.cs_file_name, cfd.cs_file_path from cs left join cs_file_dir as cfd on cs.cs_id = cfd.cs_id where cs.cs_id = ?'
   getConnection((conn) => {
     conn.query(open_sql, id, (err, rows, field) => {
       if (err) {
@@ -585,7 +585,6 @@ router.get('/cs/opencs/:cs_id', (req, res) => {
               })
             }
           } else {
-            console.log(rows)
             res.json(rows)
           }
         }
@@ -630,6 +629,29 @@ router.post('/contact/write', (req, res) => {
       }
     })
   })
+})
+
+// 파일 다운로드
+router.get('/download', (req, res) => {
+  let file = req.query.file_path + req.query.file_name;
+
+  try {
+    if (fs.existsSync(file)) {
+      let filename = path.basename(file);
+      let mimetype = mime.lookup(file)
+
+      res.setHeader('Content-diposition', 'attachment; filename = ' + filename);
+      res.setHeader('Content-type', mimetype)
+
+      let filestream = fs.createReadStream(file);
+      filestream.pipe(res);
+    } else {
+      res.send(false)
+    }
+  } catch (err) {
+    console.log(err)
+    res.send(false)
+  }
 })
 
 module.exports = router;

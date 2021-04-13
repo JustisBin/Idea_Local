@@ -3,6 +3,7 @@ let cheerio = require('cheerio')
 let iconv2 = require('iconv-lite')
 let getConnection = require('./db.js')
 let cron = require('node-cron')
+let etc = require('../common/etc.js')
 
 const getHtml = async (url) => {
   try {
@@ -48,36 +49,42 @@ function getContents(url) {
     })
 }
 
-cron.schedule('0 */1 * * * *', async () => {
-  let valText = ""
-  let selText = ""
-  await getList().then(data => {
-    getConnection(async (conn) => {
-      for (let i = 0; i < data.length - 1; i++) {
-        selText = selText + "anno_spurl != " + conn.escape(data[i].num) + " OR "
+cron.schedule('0 */1 * * * *', () => {
+  let list_sql = ""
+  getList().then(async data => {
+    getConnection((conn) => {
+      for (let i = 0; i < data.length; i++) {
+        list_sql = list_sql + "insert into anno (anno_title, anno_date, anno_link, anno_contents, anno_ref, anno_spurl) select " + conn.escape(data[i].title) + ", " + conn.escape(data[i].date) + ", " + conn.escape(data[i].url) + ", ' ', '강원대학교 컴퓨터공학과', " + conn.escape(data[i].num) + " from dual where not exists(select anno_spurl from anno where anno_spurl = " + conn.escape(data[i].num) + ");"
       }
-      selText = selText + "anno_spurl != " + conn.escape(data[data.length - 1].num) + ";"
-      let findSql = "select anno_spurl from anno where " + selText
-      await conn.query(findSql, async (err, rows, field) => {
+      conn.query(list_sql, (err, rows, field) => {
         if (err) {
           console.log(err)
         } else {
-          if (rows.length === 0) {
-            for (let i = 0; i < data.length - 1; i++) {
-              valText = valText + "(" + conn.escape(data[i].title) + ", " + conn.escape(data[i].date) + ", " + conn.escape(data[i].url) + ", ' ', '강원대학교 컴퓨터공학과', " + conn.escape(data[i].num) + "),"
-            }
-            valText = valText + "(" + conn.escape(data[data.length - 1].title) + ", " + conn.escape(data[data.length - 1].date) + ", " + conn.escape(data[data.length - 1].url) + ", ' ', '강원대학교 컴퓨터공학과', " + conn.escape(data[data.length - 1].num) + ");";
-            let listSql = "insert into anno (anno_title, anno_date, anno_link, anno_contents, anno_ref, anno_spurl) values " + valText
-            await conn.query(listSql, (err, rows, field) => {
-              if (err) {
-                console.log(err)
+          let findUrl_sql = "select anno_link from anno where anno_contents = " + conn.escape(" ")
+          conn.query(findUrl_sql, (err, rows, field) => {
+            if (err) {
+              console.log(err)
+            } else {
+              if (etc.isEmpty(rows) === true) {
+                console.log('no update')
               } else {
-                console.log('update')
+                for (let i = 0; i < rows.length; i++) {
+                  getContents(rows[i].anno_link).then(data => {
+                    let updContents_sql = "update anno set anno_contents = " + conn.escape(data.contents) + " where anno_link = " + conn.escape(rows[i].anno_link)
+                    conn.query(updContents_sql, (err, rows, field) => {
+                      if (err) {
+                        console.log(err)
+                      } else {
+                        console.log('update')
+                      }
+                    })
+                  }).catch((err) => {
+                    console.log(err)
+                  })
+                }
               }
-            })
-          } else {
-            console.log('no update')
-          }
+            }
+          })
         }
       })
       conn.release()
@@ -86,37 +93,7 @@ cron.schedule('0 */1 * * * *', async () => {
     console.log(err)
   })
 
-  await getConnection((conn) => {
-    let findUrl_sql = "select anno_link from anno where anno_contents = " + conn.escape(" ")
-    conn.query(findUrl_sql, (err, rows, field) => {
-      if (err) {
-        console.log(err)
-      } else {
-        if (rows.length === 0) {
-          console.log('not contents update')
-        } else {
-          for (let i = 0; i < rows.length; i++) {
-            getContents(rows[i].anno_link).then(data => {
-              let updContents_sql = "update anno set anno_contents = " + conn.escape(data.contents) + " where anno_link = " + conn.escape(rows[i].anno_link)
-              conn.query(updContents_sql, (err, rows, field) => {
-                if (err) {
-                  console.log(err)
-                } else {
-                  console.log('contents update')
-                }
-              })
-            }).catch((err) => {
-              console.log(err)
-            })
-          }
-          console.log('not contents update')
-        }
-      }
-    })
-    conn.release()
-  })
-
-  await getConnection((conn) => {
+  getConnection((conn) => {
     let rank_sql = 'update member t1, (select @ROWNUM := @ROWNUM + 1 rownum, member_email from member, (select @ROWNUM := 0) rn where member_ban = 0 AND member_secede = 0 order by save_point desc) t2 set t1.member_rank = t2.rownum where t1.member_email = t2.member_email'
     conn.query(rank_sql, (err, rows, field) => {
       if (err) {

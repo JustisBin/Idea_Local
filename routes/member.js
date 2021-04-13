@@ -4,12 +4,6 @@ let getConnection = require('../common/db.js')
 let mailer = require('../common/mailer.js');
 let etc = require('../common/etc.js')
 
-/* 홈화면(임시) */
-router.get('/', (req, res) => {
-  res.send('asdfsaf')
-});
-
-
 /* 회원가입 시 이메일 인증 */
 router.post('/agreemember', (req, res) => {
   let agree = req.body.chosen_agree

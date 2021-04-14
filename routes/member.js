@@ -3,6 +3,8 @@ let router = express.Router();
 let getConnection = require('../common/db.js')
 let mailer = require('../common/mailer.js');
 let etc = require('../common/etc.js')
+let crypto = require('crypto')
+let createError = require('http-errors')
 
 /* 회원가입 시 이메일 인증 */
 router.post('/agreemember', (req, res) => {
@@ -12,7 +14,7 @@ router.post('/agreemember', (req, res) => {
     res.send(true)
   } else {
     req.session.chosen = 1
-    res.send(false)
+    res.send(true)
   }
 })
 
@@ -33,7 +35,7 @@ router.post('/pass-email', (req, res) => {
 })
 
 /* 이메일 인증번호 확인 */
-router.get('/member/signup/check-token', (req, res) => {
+router.get('/check-token', (req, res) => {
   if (req.query.token === req.session.token) {
     delete req.session.token
     res.send(true)
@@ -160,7 +162,6 @@ router.post('/mypage/update', (req, res) => {
   const pw = req.body.member_pw
 
   if (req.session.member_pw === etc.pwCrypto(pw)) {
-    console.log('sess : ', req.session.member_pw, 'pw : ', etc.pwCrypto(pw))
     res.redirect('/')
   } else {
     res.send(false)
@@ -213,45 +214,14 @@ router.post('/findpassword', (req, res) => {
               let emailParam = {
                 toEmail: req.body.mail,
                 subject: "[아이디어플랫폼] 비밀번호 재설정",
-                html: `<p>아래의 링크를 클릭해주세요 </p> <a href=${process.env.DB_HOST}:3000/member/resetpassword/${token}/${req.body.mail}>인증하기</a>`
+                html: `<p>아래의 링크를 클릭해주세요 </p> <a href=localhost:3000/member/resetpassword/${token}/${req.body.mail}>인증하기</a>`
               }
               mailer.sendMail(emailParam)
-            }
-          })
-        } else {
-          res.send(false)
-        }
-      }
-    })
-    conn.release()
-  })
-})
-
-// 비밀번호재설정 링크
-// 이메일에서 LINK 클릭 시 token값을 비교하여 유효여부를 판단 후 반환
-router.get(/resetpassword/, (req, res) => {
-  let variable = req.path.split("/")
-  req.session.token = variable[3]   // 세션에 토큰 값 저장
-  req.session.us_mail = variable[4]   // 세션에 이메일 저장
-  let reset_sql = 'select pw_key, pw_dispose, pw_date from pw_find where pw_key = "' + req.session.token + '";'   // 해당 링크의 유효여부를 확인.
-  getConnection((conn) => {
-    conn.query(reset_sql, (err, rows, field) => {
-      if (err) {
-        console.log(err)
-        res.send(false)
-      } else {
-        if (rows[0].pw_dispose === 0 && rows[0].pw_date < etc.date()) {    // 유효한 링크
-          let date_sql = 'update pw_find set pw_dispose = 1 where pw_key = "' + req.session.token + '";'    // 해당 토큰의 폐기여부 업데이트
-          conn.query(date_sql, (err, rows, field) => {
-            if (err) {
-              console.log(err)
-              res.send(false)
-            } else {
               res.send(true)
             }
           })
         } else {
-          res.send(false)   // 유효하지 않은 링크
+          res.send(false)
         }
       }
     })
@@ -259,37 +229,65 @@ router.get(/resetpassword/, (req, res) => {
   })
 })
 
-// 비밀번호 재설정
-router.patch('/repw', (req, res) => {
-  if (req.body.pw === req.body.repw) {
-    const pw = req.body.member_pw
-    let pw_sql = 'update member set member_pw = ? where member_email = "' + req.session.us_mail + '";'    // 입력받은 pw를 업데이트
-    let pw_param = [etc.pwCrypto(pw)]
-    getConnection((conn) => {
-      conn.query(pw_sql, pw_param, (err, rows, field) => {
-        delete req.session.us_mail
-        req.session.save(() => { })
-        if (err) {
-          console.log(err)
-          res.send(false)
-        } else {
-          let log_sql = 'update pw_find set pw_edit = ?, pw_dispose = ? where pw_key = "' + req.session.token + '";'  // 토큰 완전폐기
-          let log_params = [1, 1]
-          conn.query(log_sql, log_params, (err, rows, field) => {
+// 비밀번호재설정
+// 이메일에서 LINK 클릭 시 token값을 비교하여 유효여부를 판단 후 반환
+router.patch(/resetpassword/, (req, res) => {
+  let variable = req.path.split("/")
+  req.session.token = variable[2]   // 세션에 토큰 값 저장
+  req.session.us_mail = variable[3]   // 세션에 이메일 저장
+  getConnection((conn) => {
+    let reset_sql = 'select pw_key, pw_dispose, pw_date from pw_find where pw_key = ' + conn.escape(req.session.token)   // 해당 링크의 유효여부를 확인.
+    conn.query(reset_sql, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send('2')
+      } else {
+        console.log(rows)
+        if (rows[0].pw_dispose === 0) {    // 유효한 링크
+          let date_sql = 'update pw_find set pw_dispose = 1 where pw_key = "' + req.session.token + '";'    // 해당 토큰의 폐기여부 업데이트
+          conn.query(date_sql, (err, rows, field) => {
             if (err) {
               console.log(err)
+              res.send('3')
             } else {
-              req.session.destroy()
-              res.redirect('/')
+              if (req.body.pw === req.body.repw) {
+                let pw = req.body.pw
+                let pw_sql = 'update member set member_pw = ? where member_email = "' + req.session.us_email + '";'    // 입력받은 pw를 업데이트
+                let pw_param = [etc.pwCrypto(pw)]
+                getConnection((conn) => {
+                  conn.query(pw_sql, pw_param, (err, rows, field) => {
+                    delete req.session.us_mail
+                    req.session.save(() => { })
+                    if (err) {
+                      console.log(err)
+                      res.send('4')
+                    } else {
+                      let log_sql = 'update pw_find set pw_edit = ?, pw_dispose = ? where pw_key = "' + req.session.token + '";'  // 토큰 완전폐기
+                      let log_params = [1, 1]
+                      conn.query(log_sql, log_params, (err, rows, field) => {
+                        if (err) {
+                          console.log(err)
+                        } else {
+                          req.session.destroy()
+                          res.redirect('/')
+                        }
+                      })
+                    }
+                  })
+                  conn.release()
+                })
+              } else {
+                res.send('1')
+              }
             }
           })
+        } else {
+          res.send('5')   // 유효하지 않은 링크
         }
-      })
-      conn.release()
+      }
     })
-  } else {
-    res.send(false)
-  }
+    conn.release()
+  })
 })
 
 //포인트 현황 조회
@@ -347,14 +345,13 @@ router.get('/mypage/usepointlist', (req, res) => {
 // 포인트 적립내역 조회
 router.get('/mypage/savepointlist', (req, res) => {
   let email = req.session.member_email
-  let savelist_sql = 'select idea.idea_title, idea.add_point, idea.date_point FROM idea INNER JOIN member mem ON mem.member_email = idea.member_email where mem.member_email = "' + email + '";'
   getConnection((conn) => {
+    let savelist_sql = 'select idea.idea_title, idea.add_point, idea.date_point FROM idea INNER JOIN member mem ON mem.member_email = idea.member_email where mem.member_email = ' + conn.escape(email) + ' and idea.add_point is not NULL;'
     conn.query(savelist_sql, (err, rows, field) => {
       if (err) {
         console.log(err)
         res.send(false)
       } else {
-        console.log('rows', rows)
         res.json(rows)
       }
     })
@@ -381,11 +378,11 @@ router.patch('/mypage/usepoint', (req, res) => {
           let use_point = rows[0].use_point + point
           let use_point_sql = 'update member set member_point = ?, use_point = ? where member_email = ?;' + 'insert into point (member_email, use_date, use_contents, point) values (?, ?, ?, ?);'
           let use_point_params = [use_member_point, use_point, email, email, etc.date(), contents, point]
-          connection.query(use_point_sql, use_point_params, (err, rows, field) => {
+          conn.query(use_point_sql, use_point_params, (err, rows, field) => {
             if (err) {
               console.log(err)
             } else {
-              console.log('use_point : ', use_point, 'member_point : ', member_point)
+              console.log('use_point : ', use_point, 'member_point : ', use_member_point)
               res.send(true)
             }
           })
@@ -410,7 +407,6 @@ router.get('/idea', (req, res) => {
           console.log('error')
           res.send(false)
         } else {
-          console.log('rows', rows)
           res.json(rows)
         }
       }
@@ -430,26 +426,25 @@ router.patch('/check', (req, res) => {
         console.log(err)
         res.send(false)
       } else {
-        console.log(rows)
         res.send(true)
       }
     })
+    conn.release()
   })
-  conn.release()
 })
 
 //내 관심사업 조회
 router.get('/marked', (req, res) => {
   let email = req.session.member_email
-  let anno_sql = 'select an.anno_id, an.anno_title, an.anno_date FROM member mem INNER JOIN inter_anno inan ON mem.member_email = inan.member_email INNER JOIN anno an ON inan.anno_id = an.anno_id AND mem.member_email = "' + email + '" AND an.anno_delete = 0;'
   getConnection((conn) => {
+    let anno_sql = 'select an.anno_id, an.anno_title, an.anno_date FROM member mem INNER JOIN inter_anno inan ON mem.member_email = inan.member_email INNER JOIN anno an ON inan.anno_id = an.anno_id AND mem.member_email = ' + conn.escape(email)
     conn.query(anno_sql, (err, rows, field) => {
       if (err) {
         console.log(err)
         res.send(false)
       } else {
         if (rows.length === 0) {
-          console.log('error')
+          console.log('not found')
           res.send(false)
         } else {
           console.log('rows', rows)

@@ -49,7 +49,7 @@ function getContents(url) {
     })
 }
 
-cron.schedule('0 */1 * * * *', () => {
+cron.schedule('0 */10 * * * *', () => {
   let list_sql = ""
   getList().then(async data => {
     getConnection((conn) => {

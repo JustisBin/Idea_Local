@@ -4,7 +4,21 @@ let getConnection = require('../common/db.js')
 let mailer = require('../common/mailer.js');
 let etc = require('../common/etc.js')
 let crypto = require('crypto')
-let createError = require('http-errors')
+
+router.get('/', (req, res) => {
+  let sql = 'select * from contact'
+  getConnection((conn) => {
+    conn.query(sql, (err, rows, field) => {
+      if (err) {
+        console.log(err)
+        res.send(false)
+      } else {
+        console.log(rows)
+        res.json(rows)
+      }
+    })
+  })
+})
 
 /* 회원가입 시 이메일 인증 */
 router.post('/agreemember', (req, res) => {

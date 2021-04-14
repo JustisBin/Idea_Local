@@ -6,6 +6,7 @@ let logger = require('morgan')
 let dotenv = require('dotenv')
 let session = require('express-session')
 let MySQLStore = require('express-mysql-session')(session);
+let patch = require('./common/patch.js')
 dotenv.config({
   path: './process.env'
 });

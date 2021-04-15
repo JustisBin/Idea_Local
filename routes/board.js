@@ -118,6 +118,9 @@ router.get('/idea/listidea', async (req, res) => {
     start_page = 1
   } else if (start_page > last_page) {
     start_page = (last_page - 1) * page_size
+    if (start_page <= 0) {
+      start_page = 1
+    }
   } else {
     start_page = (start_page - 1) * page_size;
   }
@@ -191,6 +194,9 @@ router.get('/anno/listanno', async (req, res) => {
     start_page = 1
   } else if (start_page > last_page) {
     start_page = (last_page - 1) * page_size
+    if (start_page <= 0) {
+      start_page = 1
+    }
   } else {
     start_page = (start_page - 1) * page_size;
   }
@@ -357,6 +363,9 @@ router.get('/notice/listnotice', async (req, res) => {
     start_page = 1
   } else if (start_page > last_page) {
     start_page = (last_page - 1) * page_size
+    if (start_page <= 0) {
+      start_page = 1
+    }
   } else {
     start_page = (start_page - 1) * page_size;
   }
@@ -526,6 +535,9 @@ router.get('/cs/listcs', async (req, res) => {
     start_page = 1
   } else if (start_page > last_page) {
     start_page = (last_page - 1) * page_size
+    if (start_page <= 0) {
+      start_page = 1
+    }
   } else {
     start_page = (start_page - 1) * page_size;
   }

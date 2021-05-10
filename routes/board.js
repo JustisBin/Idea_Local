@@ -215,9 +215,22 @@ router.get('/anno/listanno', async (req, res) => {
 })
 
 // 공고사항 게시물 검색
-router.get('/anno/searchanno', (req, res) => {
+router.get('/anno/searchanno', async (req, res) => {
+  let start_page = req.query.page
+  let page_size = req.query.pageSize
   let title = req.query.title
-  let listAnno_sql = 'select anno_id, anno_title, anno_date from anno where match(anno_title) against("' + title + '" IN BOOLEAN MODE);'
+  let last_page = Math.ceil(await etc.annoSearchCnt(title) / page_size)
+  if (start_page <= 0) {
+    start_page = 1
+  } else if (start_page > last_page) {
+    start_page = (last_page - 1) * page_size
+    if (start_page <= 0) {
+      start_page = 1
+    }
+  } else {
+    start_page = (start_page - 1) * page_size;
+  }
+  let listAnno_sql = 'select anno_id, anno_title, anno_date from anno where match(anno_title) against("' + title + '" IN BOOLEAN MODE) LIMIT ' + start_page + ', ' + page_size
   getConnection((conn) => {
     conn.query(listAnno_sql, (err, rows, field) => {
       if (err) {

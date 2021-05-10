@@ -43,6 +43,27 @@ const etc = {
     return count;
   },
 
+  /* 공고사항 게시물 검색 count 반환기 */
+  annoSearchCnt: async (title) => {
+    let count;
+    let cnt_sql = 'select count(*) as count from anno where match(anno_title) against("' + title + '" IN BOOLEAN MODE);'
+    await new Promise((resolve, rejects) => {
+      getConnection((conn) => {
+        conn.query(cnt_sql, (err, rows, field) => {
+          if (err) {
+            console.log(err)
+            rejects(err)
+          } else {
+            count = rows[0].count
+            resolve(count)
+          }
+        })
+        conn.release()
+      })
+    })
+    return count;
+  },
+
   /* 아이디어 게시물 count 반환기 */
   ideaCnt: async () => {
     let count;
